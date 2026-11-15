@@ -1,0 +1,10 @@
+// Configuration Cloudflare (déploiement depuis GitHub en mode Workers).
+// Site 100 % statique : Cloudflare sert les fichiers du dossier racine.
+{
+  "name": "kivutrace",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "single-page-application"
+  }
+}
