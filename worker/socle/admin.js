@@ -6,23 +6,23 @@ import { setDemo } from './demo.js';
 import { render } from './messaging.js';
 
 const LEVELS = ['province', 'territoire', 'secteur_chefferie', 'groupement', 'village'];
-export const TEMPLATE_VARS = ['nom', 'poids', 'montant', 'date', 'cooperative', 'ussd', 'volume', 'produit', 'point', 'prix', 'ordre', 'reference', 'grade', 'heure'];
+export const TEMPLATE_VARS = ['nom', 'poids', 'montant', 'date', 'cooperative', 'ussd', 'volume', 'produit', 'point', 'prix', 'ordre', 'reference', 'grade', 'heure', 'organisation', 'motif', 'lien'];
 
 // Description des entités gérables. Types : str, text, phone, enum:a,b, bool, int, num, ref:table, date, json, last4.
 // Un « ? » final rend le champ facultatif.
 export const ENTITIES = {
-  users: { label: 'Utilisateurs', fields: { login: 'str', full_name: 'str', email: 'str?', phone: 'phone?', role: 'enum:admin,coordination,buyer,agent', agent_code: 'str?', lang: 'enum:fr,sw', status: 'enum:active,blocked' },
+  users: { label: 'Utilisateurs', fields: { login: 'str', full_name: 'str', email: 'str?', phone: 'phone?', role: 'enum:admin,coordination,buyer,agent,cooperative,partner', agent_code: 'str?', lang: 'enum:fr,sw,en,ln', status: 'enum:active,blocked', account_status: 'enum:approved,pending,info_requested,refused?' },
     search: ['login', 'full_name', 'email', 'agent_code'], order: 'full_name', hide: ['pw_hash', 'pw_salt', 'totp_secret', 'totp_last_step', 'failed_attempts'] },
   zones: { label: 'Zones', fields: { parent_id: 'ref:zones?', level: 'enum:' + LEVELS.join(','), name: 'str', code: 'str?', active: 'bool' }, search: ['name', 'code'], order: 'name' },
   collection_points: { label: 'Points de collecte', fields: { village_id: 'ref:zones', name: 'str', lat: 'num', lng: 'num', active: 'bool' }, search: ['name'], order: 'name' },
   agent_assignments: { label: 'Affectations', fields: { agent_id: 'ref:users', collection_point_id: 'ref:collection_points', start_date: 'date?', end_date: 'date?' }, search: [], order: 'created_at DESC' },
   commodities: { label: 'Filières', fields: { code: 'str', name_fr: 'str', name_sw: 'str', unit: 'str', hs_code: 'str?', eudr_scope: 'bool', active: 'bool' }, search: ['code', 'name_fr', 'name_sw'], order: 'name_fr' },
   grades: { label: 'Grades', fields: { commodity_id: 'ref:commodities', code: 'str', label_fr: 'str', label_sw: 'str', criteria: 'json', rank: 'int', active: 'bool' }, search: ['code', 'label_fr', 'label_sw'], order: 'commodity_id, rank' },
-  sms_templates: { label: 'Modèles de SMS', fields: { code: 'str', lang: 'enum:sw,fr', body: 'text', description: 'str?' }, search: ['code', 'body', 'description'], order: 'code, lang' },
+  sms_templates: { label: 'Modèles de SMS', fields: { code: 'str', lang: 'enum:sw,fr,en,ln', body: 'text', description: 'str?' }, search: ['code', 'body', 'description'], order: 'code, lang' },
   producers: { label: 'Producteurs', fields: { full_name: 'str', sex: 'enum:F,M', birth_year: 'int?', phone: 'phone?', lang: 'enum:sw,fr', momo_operator: 'enum:MPESA,AIRTEL,ORANGE?', voter_last4: 'last4?', village_id: 'ref:zones?', collection_point_id: 'ref:collection_points?', household_size: 'int?', female_headed: 'bool' },
     search: ['full_name', 'code', 'phone'], order: 'code' }
 };
-const FILTERABLE = { users: ['role', 'status'], zones: ['level', 'parent_id', 'active'], collection_points: ['village_id', 'active'], agent_assignments: ['agent_id', 'collection_point_id'],
+const FILTERABLE = { users: ['role', 'status', 'account_status'], zones: ['level', 'parent_id', 'active'], collection_points: ['village_id', 'active'], agent_assignments: ['agent_id', 'collection_point_id'],
   commodities: ['active'], grades: ['commodity_id', 'active'], sms_templates: ['code', 'lang'], producers: ['consent_status', 'collection_point_id', 'village_id', 'sex', 'status', 'agent_id'] };
 
 const strip = (e, row) => { if (!row) return row; const r = { ...row }; for (const h of ENTITIES[e].hide || []) delete r[h]; return r; };
@@ -199,7 +199,7 @@ export async function routeAdmin(env, req, path, user) {
 
   /* ---------- Aperçu d'un modèle de SMS ---------- */
   if (a === 'sms_preview' && method === 'POST') {
-    const vars = { nom: 'Furaha', poids: '120', montant: '756 000 CDF', date: '18/11/2026', cooperative: 'Coopérative pilote', ussd: '*384*20#', volume: '2 000', produit: 'kahawa arabika', point: 'Minova', prix: '6 300 CDF/kg', ordre: 'OA-0001', reference: 'MP261118.4821', grade: 'Daraja 1', heure: '08:00' };
+    const vars = { organisation: 'Kivu Coffee Export', motif: 'copie du RCCM illisible', lien: new URL(req.url).origin + '/connexion', nom: 'Furaha', poids: '120', montant: '756 000 CDF', date: '18/11/2026', cooperative: 'Coopérative pilote', ussd: '*384*20#', volume: '2 000', produit: 'kahawa arabika', point: 'Minova', prix: '6 300 CDF/kg', ordre: 'OA-0001', reference: 'MP261118.4821', grade: 'Daraja 1', heure: '08:00' };
     const unknown = [...String(body.body || '').matchAll(/\{(\w+)\}/g)].map(x => x[1]).filter(v => !TEMPLATE_VARS.includes(v));
     const text = render(String(body.body || ''), vars);
     return json({ text, length: text.length, segments: Math.ceil(text.length / 160) || 1, unknown });
@@ -276,6 +276,7 @@ export async function routeAdmin(env, req, path, user) {
   if (method === 'POST' && !id) {
     if (e === 'producers') fail(400, 'Les producteurs s\'inscrivent par l\'application agent (consentement par SMS)');
     const data = await coerce(env, e, body, false);
+    if (e === 'users' && data.account_status == null) delete data.account_status;
     await validate(env, e, data, null);
     if (e === 'users') {
       checkPassword(body.password);
@@ -288,6 +289,7 @@ export async function routeAdmin(env, req, path, user) {
   if (method === 'PATCH' && id) {
     const before = await getRow(env, e, id); if (!before) fail(404, 'Introuvable');
     const data = await coerce(env, e, body, true);
+    if (e === 'users' && data.account_status == null) delete data.account_status;
     await validate(env, e, { ...before, ...data }, id);
     if (e === 'users' && id === user.id && (data.role && data.role !== 'admin' || data.status === 'blocked')) fail(400, 'Vous ne pouvez pas retirer votre propre accès administrateur');
     if (e === 'users' && 'role' in data && data.role !== 'agent') data.agent_code = null;

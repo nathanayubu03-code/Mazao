@@ -4,6 +4,10 @@ import { json, HttpError, fail } from './socle/util.js';
 import { getAuth, requireRole, routeAuth, publicUser } from './socle/auth.js';
 import { routeAdmin, purgeTrash } from './socle/admin.js';
 import { routeProducers, routeSim, agentPoints } from './socle/producers.js';
+import { routePublic, routeAccount, routeAdminPortal, requireApproved, purgeFiles } from './socle/portal.js';
+
+// Anciennes adresses : l'application agent est passée de /agent à /app
+const REDIRECTS = { '/agent': '/app', '/agent.html': '/app', '/index.html': '/', '/login': '/connexion' };
 
 async function ref(env, auth) {
   const user = requireRole(auth);
@@ -36,10 +40,20 @@ async function route(req, env) {
     const c = await env.DB.prepare("SELECT value FROM settings WHERE key = 'cooperative_name'").first();
     return json({ ok: true, demo: d?.value === '1', cooperative_name: c?.value ?? '' });
   }
+  if (path.startsWith('/api/public/')) return routePublic(env, req, path);
   const auth = await getAuth(env, req);
   if (path.startsWith('/api/auth/') || path === '/api/me') return routeAuth(env, req, path, auth);
   if (path === '/api/ref') return ref(env, auth);
-  if (path.startsWith('/api/admin/')) return routeAdmin(env, req, path, requireRole(auth, 'admin'));
+  if (path.startsWith('/api/admin/')) {
+    const admin = requireRole(auth, 'admin');
+    return (await routeAdminPortal(env, req, path, admin)) || routeAdmin(env, req, path, admin);
+  }
+  if (path === '/api/account' || path.startsWith('/api/account/')) return routeAccount(env, req, path, requireRole(auth, 'buyer', 'cooperative', 'partner', 'coordination'));
+  if (path === '/api/buyer/orders' && req.method === 'POST') {
+    const u = requireRole(auth, 'buyer');
+    await requireApproved(env, u);
+    fail(501, 'Les ordres d\'achat arrivent à l\'étape c du prototype.');
+  }
   if (path.startsWith('/api/producers')) return routeProducers(env, req, path, requireRole(auth, 'agent', 'coordination', 'admin'));
   if (path.startsWith('/api/sim/')) return routeSim(env, req, path, requireRole(auth, 'coordination', 'admin'));
   fail(404, 'Route inconnue');
@@ -48,7 +62,11 @@ async function route(req, env) {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
+    if (!url.pathname.startsWith('/api/')) {
+      const to = REDIRECTS[url.pathname.replace(/\/+$/, '') || '/'];
+      if (to) return Response.redirect(new URL(to + url.search, url.origin).toString(), 301);
+      return env.ASSETS.fetch(req);
+    }
     try {
       await ensureSchema(env);
       return await route(req, env);
@@ -60,6 +78,6 @@ export default {
   },
   async scheduled(event, env, ctx) {
     await ensureSchema(env);
-    ctx.waitUntil(purgeTrash(env));
+    ctx.waitUntil(purgeTrash(env).then(() => purgeFiles(env)));
   }
 };

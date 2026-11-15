@@ -11,6 +11,7 @@ export const DEMO_ACCOUNTS = [
   { id: 'demo-user-coord', login: 'coord.demo', full_name: 'Coordination démo', role: 'coordination' },
   { id: 'demo-user-buyer', login: 'acheteur.demo', full_name: 'Acheteur démo', role: 'buyer' }
 ];
+// Compte supplémentaire créé avec le portail : attente.demo (acheteur en attente de validation)
 export const DEMO_PASSWORD = 'Demo-Kivu-2026';
 
 // Tables qui portent is_demo, dans l'ordre de suppression (enfants d'abord)
@@ -22,19 +23,42 @@ export async function setDemo(env, enabled, actor) {
     .bind(enabled ? '1' : '0', t, actor?.full_name ?? 'système').run();
   if (!enabled) return removeDemo(env);
   const has = await env.DB.prepare('SELECT COUNT(*) AS n FROM producers WHERE is_demo = 1').first();
-  if (!has.n) await seedDemo(env);
+  if (!has.n) { await seedDemo(env); if (await hasTable(env, 'organizations')) await seedPortalDemo(env); }
+}
+
+const hasTable = async (env, name) => !!(await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").bind(name).first());
+
+// Portail : une entreprise acheteuse validée (compte acheteur.demo), une demande d'inscription
+// en attente (compte attente.demo) et une demande de démonstration, pour essayer /admin.
+export async function seedPortalDemo(env) {
+  const t = now();
+  const activity = (o) => JSON.stringify(o);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT OR IGNORE INTO organizations (id, kind, name, org_type, rccm, nif, address, country, contact_name, contact_role, phone, email, lang, activity, status, decided_at, submitted_at, is_demo, created_at, updated_at)
+      VALUES ('demo-org-buyer', 'buyer', 'Acheteur démo SARL', 'exportateur', 'CD/GOM/RCCM/24-B-00000', 'A0000000X', 'Avenue du Lac, Goma', 'RD Congo', 'Acheteur démo', 'Directeur des achats', '+243990000001', 'acheteur@demo.invalid', 'fr', ?, 'approved', ?, ?, 1, ?, ?)`)
+      .bind(activity({ commodities: ['cafe_arabica'], volume_t: 120, zones: ['zone-t-kalehe', 'zone-t-masisi'], eu_export: true }), t, t, t, t),
+    env.DB.prepare("UPDATE users SET org_id = 'demo-org-buyer' WHERE id = 'demo-user-buyer'"),
+    env.DB.prepare(`INSERT OR IGNORE INTO organizations (id, kind, name, org_type, address, country, contact_name, contact_role, phone, email, lang, activity, status, submitted_at, is_demo, created_at, updated_at)
+      VALUES ('demo-org-pending', 'buyer', 'Kivu Highlands Coffee (démo)', 'transformateur', 'Bukavu', 'RD Congo', 'Grâce Mushagalusa', 'Gérante', '+243990000002', 'attente@demo.invalid', 'fr', ?, 'pending', ?, 1, ?, ?)`)
+      .bind(activity({ commodities: ['cafe_arabica', 'cacao'], volume_t: 40, zones: ['zone-t-kabare', 'zone-t-kalehe'], eu_export: false }), t, t, t),
+    env.DB.prepare(`INSERT OR IGNORE INTO users (id, login, full_name, email, phone, role, lang, pw_salt, pw_iter, pw_hash, account_status, org_id, is_demo, created_at, updated_at)
+      VALUES ('demo-user-pending', 'attente.demo', 'Grâce Mushagalusa', 'attente@demo.invalid', '+243990000002', 'buyer', 'fr', ?, 100000, ?, 'pending', 'demo-org-pending', 1, ?, ?)`).bind(DEMO_PW.salt, DEMO_PW.hash, t, t),
+    env.DB.prepare(`INSERT OR IGNORE INTO demo_requests (id, name, organization, phone, email, message, lang, status, created_at, is_demo)
+      VALUES ('demo-dr-1', 'Patrick Mumbere', 'ONG Terres du Kivu (démo)', '+243990000003', 'demo@demo.invalid', 'Nous suivons 400 caféiculteurs à Kalehe et voudrions voir la traçabilité.', 'fr', 'new', ?, 1)`).bind(t)
+  ]);
 }
 
 export async function removeDemo(env) {
   const extra = [];
   // Tables ajoutées par les modules (créées plus tard) : on ignore celles qui n'existent pas encore
-  for (const tb of ['payments', 'weighings', 'order_offers', 'lots', 'purchase_orders', 'buyers', 'sync_ops']) {
+  for (const tb of ['payments', 'weighings', 'order_offers', 'lots', 'purchase_orders', 'buyers', 'sync_ops', 'organizations', 'demo_requests', 'files']) {
     const ex = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").bind(tb).first();
     if (ex) {
       const cols = await env.DB.prepare(`PRAGMA table_info(${tb})`).all();
       if (cols.results.some(c => c.name === 'is_demo')) extra.push(env.DB.prepare(`DELETE FROM ${tb} WHERE is_demo = 1`));
     }
   }
+  if (await hasTable(env, 'file_chunks')) extra.unshift(env.DB.prepare('DELETE FROM file_chunks WHERE file_id IN (SELECT id FROM files WHERE is_demo = 1)'));
   await env.DB.batch([
     ...extra,
     env.DB.prepare('DELETE FROM producer_commodities WHERE producer_id IN (SELECT id FROM producers WHERE is_demo = 1)'),

@@ -11,7 +11,8 @@ const MAX_FAILS = 5, LOCK_MS = 15 * 60_000;
 
 export const publicUser = (u) => u && ({
   id: u.id, login: u.login, full_name: u.full_name, role: u.role, agent_code: u.agent_code, buyer_id: u.buyer_id,
-  lang: u.lang, email: u.email, phone: u.phone, must_change: !!u.must_change, totp_enabled: !!u.totp_enabled, is_demo: !!u.is_demo
+  lang: u.lang, email: u.email, phone: u.phone, must_change: !!u.must_change, totp_enabled: !!u.totp_enabled, is_demo: !!u.is_demo,
+  account_status: u.account_status || 'approved', org_id: u.org_id || null
 });
 
 async function createSession(env, user, kind, deviceId = null) {
@@ -63,6 +64,7 @@ export async function routeAuth(env, req, path, auth) {
     const generic = 'Identifiant ou mot de passe incorrect';
     if (!u || typeof body.dk !== 'string') fail(401, generic);
     if (u.status === 'blocked') fail(403, 'Compte bloqué. Contactez l\'administrateur.');
+    if (u.account_status === 'refused') fail(403, 'Demande d\'inscription refusée. Consultez le message reçu ou contactez-nous.');
     if (u.locked_until && u.locked_until > Date.now()) fail(429, `Trop de tentatives. Réessayez dans ${Math.ceil((u.locked_until - Date.now()) / 60000)} min.`);
     const ok = safeEqual(await sha256Hex(hexToBytes(body.dk)), u.pw_hash);
     if (!ok) {

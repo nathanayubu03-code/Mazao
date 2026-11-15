@@ -11,6 +11,17 @@ import { $, $$, icon, toast, demoBanner } from '../ui/ui.js';
 const root = $('#root');
 const S = { user: null, ref: null, draft: null, step: 1, current: null, plot: null };
 
+/* ---------------- Installation sur l'écran d'accueil (agents connectés, mobile) ---------------- */
+let installEvt = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (S.user && $('#install')) $('#install').hidden = false; });
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+function installButton() {
+  if (standalone()) return '';
+  if (isIos()) return `<div class="card small">${icon('download')} ${esc(t('installIos'))}</div>`;
+  return `<button class="big" id="install" ${installEvt ? '' : 'hidden'}>${icon('download')}<span class="grow">${t('install')}</span></button>`;
+}
+
 /* ---------------- Démarrage ---------------- */
 async function start() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -57,7 +68,7 @@ function loginView() {
     e.preventDefault(); const b = $('#go'); b.disabled = true; b.textContent = t('checking');
     try {
       const r = await login($('#lg').value.trim(), $('#pw').value, 'agent');
-      if (r.stage !== 'ok' || r.user.role !== 'agent') { session.clear(); throw new Error('Compte non agent : utilisez la page de connexion web.'); }
+      if (r.stage !== 'ok' || r.user.role !== 'agent') { session.clear(); $('#err').innerHTML = esc(t('notAgent')).replace('/connexion', '<a href="/connexion">/connexion</a>'); b.disabled = false; b.textContent = t('signin'); return; }
       S.user = r.user; await loadRef(); home();
     } catch (ex) { $('#err').textContent = ex.message; b.disabled = false; b.textContent = t('signin'); }
   };
@@ -71,11 +82,14 @@ function home() {
     <button class="big" data-go="reg" ${pts.length ? '' : 'disabled'}>${icon('user-plus')}<span class="grow">${t('register')}</span>${icon('chevron-right')}</button>
     <button class="big" data-go="list">${icon('users')}<span class="grow">${t('producers')}</span>${icon('chevron-right')}</button>
     <button class="big" disabled>${icon('scale')}<span class="grow">${t('weigh')} <span class="badge">${t('soon')}</span></span></button>
+    ${installButton()}
     <div class="row" style="margin-top:8px"><button class="btn ghost" id="lang">${icon('languages')}${t('lang')}</button><button class="btn ghost right" id="out">${icon('log-out')}${t('logout')}</button></div>`);
   $('[data-go="reg"]').onclick = () => { S.draft = newDraft(); S.step = 1; regStep(); };
   $('[data-go="list"]').onclick = () => listView();
   $('#lang').onclick = () => { setLang(getLang() === 'fr' ? 'sw' : 'fr'); home(); };
   $('#out').onclick = async () => { await logout(); loginView(); };
+  const ib = $('#install');
+  if (ib) ib.onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; ib.hidden = true; };
 }
 
 /* ---------------- Inscription en 4 écrans ---------------- */

@@ -107,6 +107,74 @@ export const TEMPLATES = [
   ['HELP', 'fr', 'Désolé, message non compris. Répondez NDIYO pour accepter, HAPANA pour refuser, ou composez {ussd}.', 'Réponse non comprise']
 ];
 
+// Migration 2 : portail public (inscriptions, démonstrations, contenu du site, fichiers).
+// La table users est reconstruite pour accepter les rôles coopérative et partenaire.
+const USER_COLS = 'id, login, full_name, email, phone, role, buyer_id, agent_code, lang, pw_salt, pw_iter, pw_hash, must_change, totp_secret, totp_enabled, totp_last_step, status, failed_attempts, locked_until, last_login_at, is_demo, version, created_at, updated_at, created_by, deleted_at';
+const M0002 = `
+CREATE TABLE users_v2 (
+  id TEXT PRIMARY KEY, login TEXT NOT NULL UNIQUE, full_name TEXT NOT NULL, email TEXT, phone TEXT,
+  role TEXT NOT NULL CHECK (role IN ('admin','coordination','buyer','agent','cooperative','partner')),
+  buyer_id TEXT, agent_code TEXT UNIQUE, lang TEXT NOT NULL DEFAULT 'fr',
+  pw_salt TEXT NOT NULL, pw_iter INTEGER NOT NULL, pw_hash TEXT NOT NULL, must_change INTEGER NOT NULL DEFAULT 0,
+  totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0, totp_last_step INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','blocked')),
+  account_status TEXT NOT NULL DEFAULT 'approved' CHECK (account_status IN ('pending','info_requested','approved','refused')),
+  org_id TEXT, failed_attempts INTEGER NOT NULL DEFAULT 0, locked_until INTEGER, last_login_at TEXT, ${COMMON});
+INSERT INTO users_v2 (${USER_COLS}) SELECT ${USER_COLS} FROM users;
+DROP TABLE users;
+ALTER TABLE users_v2 RENAME TO users;
+
+CREATE TABLE organizations (
+  id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('buyer','cooperative','partner')),
+  name TEXT NOT NULL, org_type TEXT, rccm TEXT, id_nat TEXT, nif TEXT, address TEXT, country TEXT,
+  contact_name TEXT, contact_role TEXT, phone TEXT, email TEXT, lang TEXT NOT NULL DEFAULT 'fr', activity TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','info_requested','approved','refused')),
+  status_reason TEXT, decided_by TEXT, decided_at TEXT, submitted_at TEXT, ip TEXT,
+  upload_token_hash TEXT, upload_expires INTEGER, ${COMMON});
+CREATE INDEX idx_org_status ON organizations(status);
+
+CREATE TABLE files (
+  id TEXT PRIMARY KEY, owner_type TEXT NOT NULL, owner_id TEXT, kind TEXT NOT NULL, name TEXT, mime TEXT NOT NULL,
+  size INTEGER NOT NULL, sha256 TEXT, chunks INTEGER NOT NULL, created_at TEXT, created_by TEXT, deleted_at TEXT, is_demo INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX idx_files_owner ON files(owner_type, owner_id);
+CREATE TABLE file_chunks (file_id TEXT NOT NULL, idx INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (file_id, idx));
+
+CREATE TABLE demo_requests (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, organization TEXT, phone TEXT, email TEXT, message TEXT, lang TEXT,
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','contacted','closed')), note TEXT, ip TEXT,
+  created_at TEXT, handled_at TEXT, handled_by TEXT, is_demo INTEGER NOT NULL DEFAULT 0);
+
+CREATE TABLE site_content (lang TEXT NOT NULL, key TEXT NOT NULL, value TEXT, updated_at TEXT, updated_by TEXT, PRIMARY KEY (lang, key));
+
+ALTER TABLE modules ADD COLUMN site_status TEXT NOT NULL DEFAULT 'soon';
+UPDATE modules SET site_status = 'available' WHERE code = 'm1';
+ALTER TABLE messages ADD COLUMN email TEXT;
+ALTER TABLE messages ADD COLUMN subject TEXT;
+ALTER TABLE messages ADD COLUMN user_id TEXT;
+ALTER TABLE messages ADD COLUMN org_id TEXT;
+CREATE INDEX idx_messages_user ON messages(user_id)
+`;
+
+// Messages envoyés aux comptes inscrits sur le site (SMS et e-mail), dans leur langue
+export const REG_TEMPLATES = [
+  ['REG_RECEIVED', 'fr', 'KivuTrace : demande de compte reçue pour {organisation}. Nous la vérifions sous 48 h ouvrées. Vous pouvez déjà vous connecter : {lien}'],
+  ['REG_RECEIVED', 'en', 'KivuTrace: account request received for {organisation}. We will review it within 2 working days. You can already sign in: {lien}'],
+  ['REG_RECEIVED', 'sw', 'KivuTrace: ombi la akaunti ya {organisation} limepokelewa. Tutalikagua ndani ya siku 2 za kazi. Unaweza tayari kuingia: {lien}'],
+  ['REG_RECEIVED', 'ln', 'KivuTrace: tozwi bosenga ya compte mpo na {organisation}. Tokotala yango na kati ya mikolo 2 ya mosala. Okoki kokota sikoyo: {lien}'],
+  ['REG_APPROVED', 'fr', 'KivuTrace : le compte de {organisation} est validé. Connectez-vous : {lien}'],
+  ['REG_APPROVED', 'en', 'KivuTrace: the {organisation} account is approved. Sign in: {lien}'],
+  ['REG_APPROVED', 'sw', 'KivuTrace: akaunti ya {organisation} imeidhinishwa. Ingia: {lien}'],
+  ['REG_APPROVED', 'ln', 'KivuTrace: compte ya {organisation} endimami. Kota: {lien}'],
+  ['REG_REFUSED', 'fr', 'KivuTrace : la demande de {organisation} n\'a pas été acceptée. Motif : {motif}'],
+  ['REG_REFUSED', 'en', 'KivuTrace: the request from {organisation} was not accepted. Reason: {motif}'],
+  ['REG_REFUSED', 'sw', 'KivuTrace: ombi la {organisation} halikukubaliwa. Sababu: {motif}'],
+  ['REG_REFUSED', 'ln', 'KivuTrace: bosenga ya {organisation} endimami te. Ntina: {motif}'],
+  ['REG_INFO', 'fr', 'KivuTrace : il manque des informations pour valider {organisation} : {motif}. Complétez votre dossier après connexion : {lien}'],
+  ['REG_INFO', 'en', 'KivuTrace: we need more information to approve {organisation}: {motif}. Complete your file after signing in: {lien}'],
+  ['REG_INFO', 'sw', 'KivuTrace: tunahitaji maelezo zaidi ili kuidhinisha {organisation}: {motif}. Kamilisha faili lako baada ya kuingia: {lien}'],
+  ['REG_INFO', 'ln', 'KivuTrace: tozali na mposa ya bansango mosusu mpo na kondima {organisation}: {motif}. Bakisa yango soki okoti: {lien}']
+];
+
 export const MIGRATIONS = [
   { id: 1, sql: M0001, seed: async (env) => {
     const t = now(); const st = [];
@@ -143,6 +211,16 @@ export const MIGRATIONS = [
     for (const [code, label, en, av] of [['m1', 'Traçabilité café/cacao et ordres d\'achat', 1, 'live'], ['m2', 'Bons électroniques et paiements ONG', 0, 'soon'], ['m3', 'Conseil agricole, prix et alertes élevage', 0, 'soon'], ['m4', 'Crédit sur historique de livraisons', 0, 'soon']])
       ins('INSERT INTO modules (code, label, enabled, availability) VALUES (?, ?, ?, ?)', code, label, en, av);
     await env.DB.batch(st);
+  } },
+  { id: 2, sql: M0002, seed: async (env) => {
+    const t = now();
+    const st = REG_TEMPLATES.map(([code, lang, body]) => env.DB.prepare('INSERT OR IGNORE INTO sms_templates (id, code, lang, body, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), code, lang, body, 'Compte inscrit sur le site (SMS et e-mail)', t, t));
+    const g = [['contact_email', ''], ['contact_phone', ''], ['contact_address', 'Goma, Nord-Kivu, RD Congo'], ['eudr_date_large', '30/12/2026'], ['eudr_date_small', '30/06/2027'], ['legal_publisher', '']];
+    for (const [k, v] of g) st.push(env.DB.prepare("INSERT OR IGNORE INTO site_content (lang, key, value, updated_at) VALUES ('*', ?, ?, ?)").bind(k, v, t));
+    await env.DB.batch(st);
+    const d = await env.DB.prepare("SELECT value FROM settings WHERE key = 'demo_enabled'").first();
+    if (d?.value === '1') { const { seedPortalDemo } = await import('./demo.js'); await seedPortalDemo(env); }
   } }
 ];
 

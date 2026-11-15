@@ -11,9 +11,9 @@ export function render(body, vars) {
   return body.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
 }
 
-export async function renderTemplate(env, code, lang, vars) {
+export async function renderTemplate(env, code, lang, vars, fallback = 'sw') {
   let t = await env.DB.prepare('SELECT body FROM sms_templates WHERE code = ? AND lang = ? AND deleted_at IS NULL').bind(code, lang).first();
-  if (!t && lang !== 'sw') t = await env.DB.prepare("SELECT body FROM sms_templates WHERE code = ? AND lang = 'sw' AND deleted_at IS NULL").bind(code).first();
+  if (!t && lang !== fallback) t = await env.DB.prepare('SELECT body FROM sms_templates WHERE code = ? AND lang = ? AND deleted_at IS NULL').bind(code, fallback).first();
   if (!t) return null;
   const base = { cooperative: await getSetting(env, 'cooperative_name', ''), ussd: await getSetting(env, 'ussd_code', '') };
   return render(t.body, { ...base, ...vars });

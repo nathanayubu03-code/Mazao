@@ -105,3 +105,12 @@ export function normPhone(raw) {
 export const maskPhone = (p) => p ? p.slice(0, 6) + ' ••• ••' + p.slice(-3) : null;
 
 export const clampStr = (v, max = 200) => (v == null ? null : String(v).trim().slice(0, max));
+
+// Téléphone d'un compte inscrit sur le site : RDC (+243) ou international (E.164)
+export function normIntlPhone(raw) {
+  const drc = normPhone(raw); if (drc) return drc;
+  let s = String(raw || '').replace(/[\s\-().]/g, '');
+  if (s.startsWith('00')) s = '+' + s.slice(2);
+  return /^\+[1-9]\d{7,14}$/.test(s) ? s : null;
+}
+export const isEmail = (v) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(String(v || '')) && String(v).length <= 254;

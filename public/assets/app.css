@@ -190,3 +190,4 @@ table.t{width:100%;border-collapse:collapse;font-size:.88rem}
   .side,.toolbar,.demo-banner,.toasts,.btn,.icon-btn{display:none !important}
   .shell{display:block} .card{box-shadow:none}
 }
+[hidden]{display:none !important}

@@ -13,11 +13,16 @@ worker/                API Cloudflare Workers + D1
   index.js             routeur /api/*
   socle/               schéma et migrations automatiques, authentification, admin, producteurs, messagerie, démo
   providers/index.js   interface unique SMS / USSD / Mobile Money (simulée aujourd'hui)
+  socle/portal.js      portail public : contenu du site, inscriptions, démonstrations, fichiers
 public/                fichiers statiques
-  index.html           connexion
-  agent.html           application agent (mobile, français et swahili)
-  app.html             espaces acheteur et coordination
+  index.html           site public (accueil), avec services, acheteurs, producteurs,
+                       partenaires, impact, confidentialite, mentions-legales
+  inscription.html     inscription (acheteur, coopérative, ONG) en 3 étapes
+  connexion.html       connexion unique, redirection selon le rôle
+  app.html             application agent hors ligne (/app ; /agent redirige ici)
+  acheteur.html        espace acheteur ; coordination.html : coordination, coopératives, ONG
   admin.html           administration (/admin, double authentification TOTP)
+  js/site             site public (textes FR, EN, SW, LN dans js/site/i18n)
   js/socle, js/ui, js/pages
 wrangler.jsonc         configuration Cloudflare
 ```
@@ -40,4 +45,12 @@ Pas d'outil de compilation : modules JavaScript natifs. Le schéma D1 s'installe
 
 ## Données de démonstration
 
-Activées par défaut, signalées par un bandeau « Données fictives ». Comptes (mot de passe `Demo-Kivu-2026`) : `agent.demo`, `agent2.demo`, `coord.demo`, `acheteur.demo`. À désactiver dans /admin › Paramètres avant le pilote réel : cela supprime toutes les lignes marquées démo.
+Activées par défaut, signalées par un bandeau « Données fictives ». Comptes (mot de passe `Demo-Kivu-2026`) : `agent.demo`, `agent2.demo`, `coord.demo`, `acheteur.demo`, `attente.demo` (acheteur en attente de validation). À désactiver dans /admin › Paramètres avant le pilote réel : cela supprime toutes les lignes marquées démo.
+
+## Portail public
+
+- Une seule adresse : le site de présentation (`/`) et l'entrée vers chaque espace (`/connexion`).
+- Les inscriptions du site arrivent dans /admin › Demandes d'inscription. Tant qu'un compte n'est pas validé, il ne voit qu'un écran d'attente ; l'API refuse ordres et listes de producteurs.
+- E-mails simulés (Cloudflare n'envoie pas vers n'importe quelle adresse sur le plan gratuit) ; ils sont visibles dans /admin et dans l'espace du destinataire. Interface prête pour un vrai service dans `worker/providers/index.js`.
+- Documents et photos stockés dans D1 (1,5 Mo maximum par fichier).
+- Textes, statut des services, coordonnées et photos : /admin › Contenu du site. Traductions anglaises, swahilies et lingala à faire relire.

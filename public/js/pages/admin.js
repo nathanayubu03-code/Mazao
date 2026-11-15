@@ -5,15 +5,20 @@ import { esc, date, dateTime, fmtPhone, download, stamp, debounce } from '../soc
 import { $, $$, icon, toast, modal, closeModal, confirmBox, skeleton, countUp, demoBanner, toggleTheme, consentBadge } from '../ui/ui.js';
 import { listView } from '../ui/table.js';
 import { phoneSim } from '../ui/phone.js';
+import { PORTAL_SECTIONS, refreshCounts } from './admin-portal.js';
 
 const root = $('#root');
 let REF = null, AGENTS = [];
 const LEVELS = [['province', 'Province'], ['territoire', 'Territoire'], ['secteur_chefferie', 'Secteur / chefferie'], ['groupement', 'Groupement'], ['village', 'Village']];
 const LEVEL_LABEL = Object.fromEntries(LEVELS);
-const ROLES = [['agent', 'Agent de collecte'], ['buyer', 'Acheteur'], ['coordination', 'Coordination'], ['admin', 'Administrateur']];
+const ROLES = [['agent', 'Agent de collecte'], ['buyer', 'Acheteur'], ['cooperative', 'Coopérative'], ['partner', 'Partenaire (ONG)'], ['coordination', 'Coordination'], ['admin', 'Administrateur']];
+const LANG_OPTS = [['fr', 'Français'], ['en', 'Anglais'], ['sw', 'Swahili'], ['ln', 'Lingala']];
+const LANG_LABEL = Object.fromEntries(LANG_OPTS);
 const ROLE_LABEL = Object.fromEntries(ROLES);
-const TPL_CODES = ['CONSENT_REQUEST', 'CONSENT_OK', 'CONSENT_REFUSED', 'HELP', 'ORDER_OFFER', 'ORDER_CONFIRMED', 'ORDER_REMINDER', 'WEIGH_RECEIPT', 'PAYMENT_SENT'];
-const VARS = ['nom', 'poids', 'montant', 'date', 'cooperative', 'ussd', 'volume', 'produit', 'point', 'prix', 'ordre', 'reference', 'grade', 'heure'];
+const ACC_LABEL = { pending: 'En attente', info_requested: 'Complément demandé', approved: 'Validé', refused: 'Refusé' };
+const ACC_BADGE = { pending: 'b-warn', info_requested: 'b-warn', approved: 'b-ok', refused: 'b-err' };
+const TPL_CODES = ['CONSENT_REQUEST', 'CONSENT_OK', 'CONSENT_REFUSED', 'HELP', 'ORDER_OFFER', 'ORDER_CONFIRMED', 'ORDER_REMINDER', 'WEIGH_RECEIPT', 'PAYMENT_SENT', 'REG_RECEIVED', 'REG_APPROVED', 'REG_REFUSED', 'REG_INFO'];
+const VARS = ['nom', 'poids', 'montant', 'date', 'cooperative', 'ussd', 'volume', 'produit', 'point', 'prix', 'ordre', 'reference', 'grade', 'heure', 'organisation', 'motif', 'lien'];
 
 /* ------------------------------------------------------------------ Connexion */
 async function start() {
@@ -87,7 +92,8 @@ function forcePassword(user) {
 
 /* ------------------------------------------------------------------ Structure */
 const NAV = [
-  ['dash', 'layout-dashboard', 'Tableau de bord'],
+  ['registrations', 'user-check', 'Demandes d\'inscription'], ['dash', 'layout-dashboard', 'Tableau de bord'],
+  '|Site public', ['demos', 'calendar', 'Demandes de démonstration'], ['site', 'globe', 'Contenu du site'],
   '|Référentiels', ['zones', 'map', 'Géographie'], ['points', 'map-pin', 'Points de collecte'], ['commodities', 'coffee', 'Filières'], ['grades', 'scale', 'Grades'],
   '|Personnes', ['users', 'users', 'Utilisateurs'], ['assignments', 'map-pinned', 'Affectations des agents'], ['producers', 'sprout', 'Producteurs'],
   '|Communication', ['templates', 'message-square-text', 'Modèles de SMS'], ['simulator', 'smartphone', 'Téléphone producteur'],
@@ -97,7 +103,8 @@ const NAV = [
 async function boot(user) {
   root.innerHTML = `<div class="shell"><aside class="side">
       <div class="brand"><img src="/assets/logo-mark.png" alt=""><div><b>KivuTrace &amp; Market</b><span class="tiny muted">Administration</span></div></div>
-      ${NAV.map(n => typeof n === 'string' ? `<div class="nav-sep">${n.slice(1)}</div>` : `<button class="nav-btn" data-nav="${n[0]}">${icon(n[1])}${n[2]}</button>`).join('')}
+      ${NAV.map(n => typeof n === 'string' ? `<div class="nav-sep">${n.slice(1)}</div>` : `<button class="nav-btn" data-nav="${n[0]}">${icon(n[1])}<span class="grow">${n[2]}</span><span class="badge b-err nav-count" data-count="${n[0]}" hidden></span></button>`).join('')}
+      <a class="nav-btn" href="/" target="_blank" rel="noopener">${icon('external-link')}Voir le site</a>
       <div class="side-foot"><div class="small"><b>${esc(user.full_name)}</b><div class="tiny muted">${esc(user.login)}</div></div>
         <div class="row"><button class="icon-btn" id="theme" title="Mode sombre" aria-label="Changer de thème">${icon('moon')}</button><button class="btn sm ghost" id="out">${icon('log-out')}Déconnexion</button></div></div>
     </aside><main class="main" id="main"></main></div>`;
@@ -105,6 +112,7 @@ async function boot(user) {
   $('#theme').onclick = toggleTheme;
   $$('[data-nav]').forEach(b => b.onclick = () => go(b.dataset.nav));
   await loadRef();
+  refreshCounts();
   go(location.hash.slice(1) || 'dash');
   if (user.must_change) forcePassword(user);
 }
@@ -131,6 +139,7 @@ function go(sec) {
 
 /* ------------------------------------------------------------------ Sections */
 const SECTIONS = {
+  ...PORTAL_SECTIONS,
   async dash(el) {
     const [s, a] = await Promise.all([api('/api/admin/summary'), api('/api/admin/audit')]);
     el.innerHTML = `<div class="page-h"><div><h1>Tableau de bord</h1><p>Vue d'ensemble de la plateforme.</p></div></div>
@@ -199,12 +208,12 @@ const SECTIONS = {
     listView(el, { entity: 'users', title: 'Utilisateurs', sub: 'Comptes et rôles. Chaque rôle ne voit que son espace. Un nouveau compte reçoit un mot de passe provisoire à changer à la 1re connexion.', importCsv: false,
       filters: [{ key: 'role', label: 'Rôle', options: () => ROLES }, { key: 'status', label: 'État', options: () => [['active', 'Actif'], ['blocked', 'Bloqué']] }],
       columns: [{ key: 'full_name', label: 'Nom', render: r => `<b>${esc(r.full_name)}</b><div class="tiny muted">${esc(r.login)}</div>` }, { key: 'role', label: 'Rôle', render: r => `<span class="badge b-pri">${esc(ROLE_LABEL[r.role])}</span>${r.agent_code ? ` <span class="mono small">${esc(r.agent_code)}</span>` : ''}` },
-        { key: 'status', label: 'État', render: r => (r.status === 'blocked' ? '<span class="badge b-err">Bloqué</span>' : '<span class="badge b-ok">Actif</span>') + (r.locked_until > Date.now() ? ' <span class="badge b-warn">Verrouillé</span>' : '') + (r.is_demo ? ' <span class="badge b-warn">Démo</span>' : '') },
+        { key: 'status', label: 'État', render: r => (r.status === 'blocked' ? '<span class="badge b-err">Bloqué</span>' : '<span class="badge b-ok">Actif</span>') + (r.account_status && r.account_status !== 'approved' ? ` <span class="badge b-warn">${esc(ACC_LABEL[r.account_status])}</span>` : '') + (r.locked_until > Date.now() ? ' <span class="badge b-warn">Verrouillé</span>' : '') + (r.is_demo ? ' <span class="badge b-warn">Démo</span>' : '') },
         { key: 'role', label: 'Double auth.', render: r => r.role === 'admin' ? (r.totp_enabled ? '<span class="badge b-ok">Active</span>' : '<span class="badge b-warn">À activer</span>') : '<span class="muted small">—</span>' },
         { key: 'last_login_at', label: 'Dernière connexion', render: r => esc(dateTime(r.last_login_at)) || '<span class="muted small">jamais</span>' }],
       fields: [{ key: 'full_name', label: 'Nom complet', required: true }, { key: 'login', label: 'Identifiant', required: true, hint: 'Ex. prenom.nom' },
         { key: 'role', label: 'Rôle', type: 'select', required: true, options: () => ROLES }, { key: 'agent_code', label: 'Code agent', hint: 'Obligatoire pour un agent, ex. AG07. Il préfixe les codes producteurs.' },
-        { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Téléphone' }, { key: 'lang', label: 'Langue', type: 'select', options: () => [['fr', 'Français'], ['sw', 'Swahili']], default: 'fr' },
+        { key: 'email', label: 'E-mail' }, { key: 'phone', label: 'Téléphone' }, { key: 'lang', label: 'Langue', type: 'select', options: () => LANG_OPTS, default: 'fr' },
         { key: 'status', label: 'État', type: 'select', options: () => [['active', 'Actif'], ['blocked', 'Bloqué']], default: 'active' },
         { key: 'temp_password', label: 'Mot de passe provisoire', type: 'password', createOnly: true, required: true, hint: '10 caractères minimum, lettres et chiffres. À transmettre à la personne.' }],
       async beforeSave(d, row) {
@@ -250,11 +259,11 @@ const SECTIONS = {
   },
 
   templates(el) {
-    listView(el, { entity: 'sms_templates', title: 'Modèles de SMS', sub: 'Textes envoyés aux producteurs, en swahili et en français. Variables : ' + VARS.map(v => '{' + v + '}').join(' '),
-      filters: [{ key: 'lang', label: 'Langue', options: () => [['sw', 'Swahili'], ['fr', 'Français']] }, { key: 'code', label: 'Modèle', options: () => TPL_CODES.map(c => [c, c]) }],
-      columns: [{ key: 'code', label: 'Modèle', render: r => `<span class="mono">${esc(r.code)}</span><div class="tiny muted">${esc(r.description || '')}</div>` }, { key: 'lang', label: 'Langue', render: r => r.lang === 'sw' ? 'Swahili' : 'Français' },
+    listView(el, { entity: 'sms_templates', title: 'Modèles de SMS et d\'e-mails', sub: 'Textes envoyés aux producteurs (swahili, français) et aux comptes inscrits sur le site (REG_*, en français, anglais, swahili et lingala, envoyés par SMS et par e-mail). Variables : ' + VARS.map(v => '{' + v + '}').join(' '),
+      filters: [{ key: 'lang', label: 'Langue', options: () => LANG_OPTS }, { key: 'code', label: 'Modèle', options: () => TPL_CODES.map(c => [c, c]) }],
+      columns: [{ key: 'code', label: 'Modèle', render: r => `<span class="mono">${esc(r.code)}</span><div class="tiny muted">${esc(r.description || '')}</div>` }, { key: 'lang', label: 'Langue', render: r => esc(LANG_LABEL[r.lang] || r.lang) },
         { key: 'body', label: 'Texte', render: r => `<span class="small">${esc(r.body)}</span>` }],
-      fields: [{ key: 'code', label: 'Modèle', type: 'select', required: true, options: () => TPL_CODES.map(c => [c, c]) }, { key: 'lang', label: 'Langue', type: 'select', required: true, options: () => [['sw', 'Swahili'], ['fr', 'Français']] },
+      fields: [{ key: 'code', label: 'Modèle', type: 'select', required: true, options: () => TPL_CODES.map(c => [c, c]) }, { key: 'lang', label: 'Langue', type: 'select', required: true, options: () => LANG_OPTS },
         { key: 'description', label: 'Description' }, { key: 'body', label: 'Texte du SMS', type: 'textarea', required: true }],
       onFormRender(form) {
         const body = $('#fld-body', form);

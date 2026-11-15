@@ -34,9 +34,10 @@ export async function login(loginName, password, kind) {
   return r;
 }
 
-export async function confirmTotp(pendingToken, code) {
+export async function confirmTotp(pendingToken, code, space = null) {
   const r = await api('/api/auth/totp', { method: 'POST', token: pendingToken, body: { code } });
-  session.set({ token: r.token, user: r.user, at: Date.now() });
+  const s = { token: r.token, user: r.user, at: Date.now() };
+  if (space) session.setFor(space, s); else session.set(s);
   return r;
 }
 
@@ -62,12 +63,14 @@ export function deviceIdentity() {
   } catch { return null; }
 }
 
-export const HOME = { agent: '/agent', buyer: '/app', coordination: '/app', admin: '/admin' };
+export const HOME = { agent: '/app', buyer: '/acheteur', coordination: '/coordination', cooperative: '/coordination', partner: '/coordination', admin: '/admin' };
+// Espace (clé de session) de chaque rôle
+export const SPACE_OF = { agent: 'agent', admin: 'admin' };
 
 // Garde d'accès d'une page : renvoie l'utilisateur ou redirige vers la connexion
 export async function guard(roles) {
   const s = session.get();
-  if (!s?.token) { location.replace('/?next=' + encodeURIComponent(location.pathname)); return null; }
-  if (!roles.includes(s.user.role)) { session.clear(); location.replace('/'); return null; }
+  if (!s?.token) { location.replace('/connexion?next=' + encodeURIComponent(location.pathname)); return null; }
+  if (!roles.includes(s.user.role)) { location.replace(HOME[s.user.role] || '/connexion'); return null; }
   return s.user;
 }

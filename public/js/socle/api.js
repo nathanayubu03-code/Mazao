@@ -1,7 +1,7 @@
 // Accès à l'API du Worker. Le jeton de session est gardé sur l'appareil.
 // Une session distincte par espace (web, agent, admin) : se connecter comme
 // administrateur ne détourne plus les autres liens vers /admin, et inversement.
-export const SPACE = location.pathname.startsWith('/admin') ? 'admin' : location.pathname.startsWith('/agent') ? 'agent' : 'web';
+export const SPACE = /^\/admin(\/|\.html|$)/.test(location.pathname) ? 'admin' : /^\/(app|agent)(\/|\.html|$)/.test(location.pathname) ? 'agent' : 'web';
 const keyOf = (space) => 'kt.session.' + space;
 const KEY = keyOf(SPACE);
 

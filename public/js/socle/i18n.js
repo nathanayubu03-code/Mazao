@@ -4,6 +4,7 @@ const T = {
   fr: {
     app: 'Application agent', login: 'Connexion', id: 'Identifiant', password: 'Mot de passe', signin: 'Se connecter', checking: 'Vérification…',
     online: 'En ligne', offline: 'Hors ligne', hello: 'Bonjour', register: 'Inscrire un producteur', producers: 'Mes producteurs', weigh: 'Pesée du jour', soon: 'bientôt',
+    install: 'Installer l\'application', installIos: 'Sur iPhone : touchez Partager, puis « Sur l\'écran d\'accueil ».', notAgent: 'Ce compte n\'est pas un compte agent. Connectez-vous sur la page /connexion.',
     logout: 'Déconnexion', lang: 'Kiswahili', next: 'Suivant', back: 'Retour', save: 'Enregistrer', cancel: 'Annuler', step: 'Étape',
     s1: 'Identité', s2: 'Paiement et lieu', s3: 'Ménage', s4: 'Saison précédente',
     fullname: 'Nom complet', sex: 'Sexe', woman: 'Femme', man: 'Homme', birthyear: 'Année de naissance', phone: 'Téléphone',
@@ -21,6 +22,7 @@ const T = {
   sw: {
     app: 'Programu ya wakala', login: 'Kuingia', id: 'Jina la mtumiaji', password: 'Nenosiri', signin: 'Ingia', checking: 'Inakagua…',
     online: 'Mtandaoni', offline: 'Bila mtandao', hello: 'Jambo', register: 'Andikisha mkulima', producers: 'Wakulima wangu', weigh: 'Kupima leo', soon: 'hivi karibuni',
+    install: 'Sakinisha programu', installIos: 'Kwenye iPhone: gusa Shiriki, kisha « Kwenye skrini ya mwanzo ».', notAgent: 'Akaunti hii si ya wakala. Ingia kwenye ukurasa /connexion.',
     logout: 'Toka', lang: 'Français', next: 'Endelea', back: 'Rudi', save: 'Hifadhi', cancel: 'Ghairi', step: 'Hatua',
     s1: 'Utambulisho', s2: 'Malipo na mahali', s3: 'Familia', s4: 'Msimu uliopita',
     fullname: 'Jina kamili', sex: 'Jinsia', woman: 'Mwanamke', man: 'Mwanaume', birthyear: 'Mwaka wa kuzaliwa', phone: 'Simu',
