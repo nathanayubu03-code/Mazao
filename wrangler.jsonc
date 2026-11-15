@@ -1,10 +1,23 @@
-// Configuration Cloudflare (déploiement depuis GitHub en mode Workers).
-// Site 100 % statique : Cloudflare sert les fichiers du dossier racine.
+// Configuration Cloudflare : Worker (API dans worker/) + fichiers statiques (public/) + base D1.
 {
   "name": "mazao",
+  "main": "worker/index.js",
   "compatibility_date": "2025-09-01",
   "assets": {
-    "directory": ".",
-    "not_found_handling": "single-page-application"
-  }
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kivutrace",
+      // Identifiant de la base D1 créée dans le tableau de bord Cloudflare
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  // Purge quotidienne de la corbeille (éléments supprimés depuis plus de 30 jours)
+  "triggers": { "crons": ["17 2 * * *"] },
+  "observability": { "enabled": true }
 }

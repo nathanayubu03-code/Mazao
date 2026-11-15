@@ -1,23 +1,43 @@
-# KivuTrace & Market
+# KivuTrace & Market (v2, pilote)
 
-PWA de traçabilité agricole et de paiement Mobile Money pour les coopératives du Kivu (RDC). Trois espaces dans un seul `index.html` : l'application terrain (inscription des producteurs, QR code, tracé GPS des parcelles avec pré-contrôle EUDR, pesées, SMS en swahili), le portail bailleurs (indicateurs, carte, graphiques, histoires de réussite, exports) et l'administration protégée par compte (producteurs avec import CSV, parcelles, collectes et paiements, logistique, analyse d'impact, gestion du contenu, sauvegarde, sécurité).
+Plateforme modulaire pour un pilote réel au Nord-Kivu et au Sud-Kivu : un acheteur, deux agents de collecte, 20 à 50 producteurs.
 
-## Fichiers
+- **Socle** : rôles et connexion, producteurs, localisation hiérarchique, consentement par SMS, canal SMS/USSD, paiement Mobile Money, application agent, tableau de bord.
+- **Module 1** : traçabilité café/cacao (EUDR) et ordres d'achat (étapes c à f).
+- **Modules 2 à 4** : préparés dans le modèle de données, interrupteurs « bientôt disponible » dans /admin.
 
-`index.html` contient tout le CSS et le JS. `logo-mark.png` est le logo, `icon-192.png` et `icon-512.png` servent à l'installation sur téléphone, `sw.js` et `manifest.webmanifest` gèrent le hors ligne, `wrangler.jsonc` et `.assetsignore` configurent Cloudflare. Les librairies (Leaflet 1.9.4, Chart.js 4.4.1, qrcode.js 1.0.0) viennent de cdn.jsdelivr.net.
+## Architecture
 
-## Déploiement
+```
+worker/                API Cloudflare Workers + D1
+  index.js             routeur /api/*
+  socle/               schéma et migrations automatiques, authentification, admin, producteurs, messagerie, démo
+  providers/index.js   interface unique SMS / USSD / Mobile Money (simulée aujourd'hui)
+public/                fichiers statiques
+  index.html           connexion
+  agent.html           application agent (mobile, français et swahili)
+  app.html             espaces acheteur et coordination
+  admin.html           administration (/admin, double authentification TOTP)
+  js/socle, js/ui, js/pages
+wrangler.jsonc         configuration Cloudflare
+```
 
-Le projet Cloudflare `mazao` est relié à ce dépôt : chaque push sur la branche de production redéploie le site en une à deux minutes.
+Pas d'outil de compilation : modules JavaScript natifs. Le schéma D1 s'installe et se met à jour tout seul au premier appel de l'API.
 
-## Compte administrateur
+## Mise en route sur Cloudflare
 
-Identifiant `admin`. Le mot de passe initial a été transmis au propriétaire du dépôt hors de ce fichier et doit être changé à la première connexion (l'application l'impose). Seul son hachage PBKDF2-SHA256 figure dans le code.
+1. Créer une base D1 nommée `kivutrace` (Stockage & bases de données › D1) et copier son identifiant dans `wrangler.jsonc` (`database_id`).
+2. Pousser sur la branche : Cloudflare construit et déploie.
+3. Ouvrir `/admin`, se connecter avec `admin` et le mot de passe initial transmis hors du dépôt, scanner le QR code avec une application d'authentification, choisir un mot de passe personnel.
+4. Facultatif : ajouter un secret `TOTP_KEY` (Paramètres du Worker › Variables et secrets) pour chiffrer les secrets de double authentification en base.
 
-Limite à connaître : sans serveur, la vérification se fait dans le navigateur et chaque appareil garde ses propres données et son propre mot de passe. Pour un déploiement réel, ajouter une base (Cloudflare D1 + Worker) ou protéger l'accès avec Cloudflare Access.
+## Sécurité
 
-## Ce qui est réel et ce qui est simulé
+- Le mot de passe est dérivé sur l'appareil (PBKDF2-SHA256, 100 000 tours) ; le serveur stocke SHA-256 de la clé dérivée. Compatible avec le plan gratuit de Workers.
+- Administrateurs : double authentification TOTP obligatoire. Blocage 15 minutes après 5 échecs.
+- Les droits sont vérifiés par le serveur à chaque requête. L'agent ne voit que les producteurs de ses points de collecte, avec un téléphone masqué et sans coordonnées GPS.
+- Journal de toutes les modifications ; corbeille de 30 jours (purge quotidienne planifiée).
 
-Réel : stockage local, calcul de surface géodésique, détection de polygone auto-sécant, chevauchement avec les aires protégées, QR codes, import CSV, exports GeoJSON (RFC 7946, 6 décimales) et CSV (séparateur `;`, Excel en français), sauvegarde et restauration JSON, impression PDF, GPS du téléphone (HTTPS requis).
+## Données de démonstration
 
-Simulé : serveur central, API Mobile Money (références au format `MP261115.8942`), passerelle SMS, contours des parcs Virunga et Kahuzi-Biega (simplifiés, à remplacer par la base WDPA pour un audit).
+Activées par défaut, signalées par un bandeau « Données fictives ». Comptes (mot de passe `Demo-Kivu-2026`) : `agent.demo`, `agent2.demo`, `coord.demo`, `acheteur.demo`. À désactiver dans /admin › Paramètres avant le pilote réel : cela supprime toutes les lignes marquées démo.
