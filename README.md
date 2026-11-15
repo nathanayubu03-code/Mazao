@@ -1,23 +1,23 @@
-# KivuTrace & Market (MVP)
+# KivuTrace & Market
 
-Plateforme de traçabilité agricole pour les coopératives du Kivu (RDC) : enregistrement des producteurs, cartographie GPS des parcelles avec pré-contrôle EUDR, pesées, paiements Mobile Money simulés, groupage logistique et tableau d'impact pour bailleurs.
+PWA de traçabilité agricole et de paiement Mobile Money pour les coopératives du Kivu (RDC). Trois espaces dans un seul `index.html` : l'application terrain (inscription des producteurs, QR code, tracé GPS des parcelles avec pré-contrôle EUDR, pesées, SMS en swahili), le portail bailleurs (indicateurs, carte, graphiques, histoires de réussite, exports) et l'administration protégée par compte (producteurs avec import CSV, parcelles, collectes et paiements, logistique, analyse d'impact, gestion du contenu, sauvegarde, sécurité).
 
-Tout tient dans `index.html` (HTML, CSS et JS vanilla). Les librairies (Leaflet 1.9.4, Chart.js 4.4.1, qrcode.js 1.0.0, Font Awesome 6.5.2) viennent de cdn.jsdelivr.net. Les fichiers `sw.js`, `manifest.webmanifest` et `icon.svg` rendent l'application installable et utilisable hors ligne après une première visite en ligne.
+## Fichiers
 
-## Déploiement Cloudflare Pages
+`index.html` contient tout le CSS et le JS. `logo-mark.png` est le logo, `icon-192.png` et `icon-512.png` servent à l'installation sur téléphone, `sw.js` et `manifest.webmanifest` gèrent le hors ligne, `wrangler.jsonc` et `.assetsignore` configurent Cloudflare. Les librairies (Leaflet 1.9.4, Chart.js 4.4.1, qrcode.js 1.0.0) viennent de cdn.jsdelivr.net.
 
-Aucun build. Dans Cloudflare : Workers & Pages, Create, Pages, Connect to Git, choisir ce dépôt. Framework preset : None. Build command : vide. Build output directory : `/`. Le fichier `_headers` empêche la mise en cache de `sw.js` et `index.html`, pour que chaque mise à jour arrive tout de suite sur les téléphones.
+## Déploiement
 
-Alternative sans Git : `npx wrangler pages deploy . --project-name kivutrace`.
+Le projet Cloudflare `mazao` est relié à ce dépôt : chaque push sur la branche de production redéploie le site en une à deux minutes.
+
+## Compte administrateur
+
+Identifiant `admin`. Le mot de passe initial a été transmis au propriétaire du dépôt hors de ce fichier et doit être changé à la première connexion (l'application l'impose). Seul son hachage PBKDF2-SHA256 figure dans le code.
+
+Limite à connaître : sans serveur, la vérification se fait dans le navigateur et chaque appareil garde ses propres données et son propre mot de passe. Pour un déploiement réel, ajouter une base (Cloudflare D1 + Worker) ou protéger l'accès avec Cloudflare Access.
 
 ## Ce qui est réel et ce qui est simulé
 
-Réel : stockage local (localStorage), calcul de surface géodésique, détection de polygone auto-sécant, test de chevauchement avec les aires protégées, QR codes, exports GeoJSON (RFC 7946, anneaux fermés, 6 décimales) et CSV (séparateur `;`, décimale `,`, BOM UTF-8 pour Excel FR), impression PDF via le navigateur, GPS réel (HTTPS requis).
+Réel : stockage local, calcul de surface géodésique, détection de polygone auto-sécant, chevauchement avec les aires protégées, QR codes, import CSV, exports GeoJSON (RFC 7946, 6 décimales) et CSV (séparateur `;`, Excel en français), sauvegarde et restauration JSON, impression PDF, GPS du téléphone (HTTPS requis).
 
-Simulé : serveur central (la synchronisation vide la file locale), API Mobile Money (référence générée au format `MP261115.8942`), passerelle SMS, et contours des parcs Virunga et Kahuzi-Biega (simplifiés, à remplacer par les couches WDPA officielles pour un audit).
-
-## Tester
-
-Ouvrir le site, puis : onglet Agent, enregistrer un producteur, cartographier sa parcelle avec « Simuler le tour complet », basculer « Hors ligne » dans l'en-tête, saisir une pesée (popup SMS swahili), revenir « En ligne » (sync automatique), payer dans l'onglet Coopérative, programmer un ramassage, puis exporter depuis l'onglet Bailleurs. Pour voir un cas non conforme, tracer une parcelle à la main (clic sur la carte) dans la zone rouge du parc des Virunga au nord de Goma.
-
-Le bouton « Réinitialiser les données démo » est dans Paramètres (roue dentée).
+Simulé : serveur central, API Mobile Money (références au format `MP261115.8942`), passerelle SMS, contours des parcs Virunga et Kahuzi-Biega (simplifiés, à remplacer par la base WDPA pour un audit).

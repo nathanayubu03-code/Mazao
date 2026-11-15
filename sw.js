@@ -2,14 +2,13 @@
    - App shell (index.html) : réseau d'abord, cache en secours
    - Librairies CDN, polices : cache d'abord
    - Tuiles cartographiques : cache opportuniste (les zones déjà consultées restent visibles hors ligne) */
-const VERSION = 'kivutrace-v2';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
+const VERSION = 'kivutrace-v3';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './logo-mark.png', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js',
-  'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css'
+  'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
 ];
 const TILE_CACHE = 'kivutrace-tiles';
 const TILE_MAX = 600;
