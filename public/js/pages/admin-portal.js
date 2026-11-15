@@ -11,6 +11,7 @@ const TYPE = { exportateur: 'Exportateur', transformateur: 'Transformateur', coo
   ong_internationale: 'ONG internationale', ong_locale: 'ONG locale', bailleur: 'Bailleur', agence_publique: 'Agence publique', entreprise: 'Entreprise', autre: 'Autre' };
 const COM = { cafe_arabica: 'Café arabica', cacao: 'Cacao', vivres: 'Vivres' };
 const LANGS = [['fr', 'Français'], ['en', 'Anglais'], ['sw', 'Swahili'], ['ln', 'Lingala']];
+const PROFILE = { buyer: 'Acheteur ou exportateur', cooperative: 'Coopérative', ngo: 'ONG ou projet', other: 'Autre' };
 const DEMO_ST = { new: ['Nouvelle', 'b-warn'], contacted: ['Contactée', 'b-pri'], closed: ['Close', 'b-ok'] };
 const accBadge = (s) => `<span class="badge ${ACC[s]?.[1] || ''}">${esc(ACC[s]?.[0] || s)}</span>`;
 
@@ -115,6 +116,7 @@ async function demos(el) {
     const rows = (await api('/api/admin/demo_requests')).rows;
     $('#list', el).innerHTML = rows.length ? `<div class="stack">${rows.map(r => `<div class="card stack" style="gap:8px">
       <div class="row"><b class="grow">${esc(r.name)}${r.organization ? ` · ${esc(r.organization)}` : ''}</b><span class="badge ${DEMO_ST[r.status][1]}">${DEMO_ST[r.status][0]}</span>${r.is_demo ? '<span class="badge b-warn">Démo</span>' : ''}<span class="tiny muted">${esc(dateTime(r.created_at))}</span></div>
+      ${r.profile ? `<div class="small"><span class="muted">Vous êtes :</span> ${esc(PROFILE[r.profile] || r.profile)}</div>` : ''}
       <div class="small row">${r.phone ? `${icon('phone')}<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : ''}${r.email ? `${icon('mail')}<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>` : ''}<span class="muted">${esc(LANGS.find(l => l[0] === r.lang)?.[1] || '')}</span></div>
       ${r.message ? `<p class="small" style="white-space:pre-wrap">${esc(r.message)}</p>` : ''}
       <div class="row"><select class="input" data-st="${r.id}" style="width:auto">${Object.entries(DEMO_ST).map(([k, [l]]) => `<option value="${k}" ${k === r.status ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -133,8 +135,8 @@ async function demos(el) {
 
 /* ------------------------------------------------------------------ Contenu du site */
 const GROUPS = [
-  ['Accueil', /^(home\.|journey\.|kpi\.|how\.|who\.|eudr\.|demo\.)/], ['Services', /^(svc\.|services\.)/], ['Acheteurs', /^buyers\./], ['Producteurs', /^producers\./],
-  ['Partenaires', /^partners\./], ['Impact', /^impact\./], ['Pages légales', /^(privacy\.|legal\.)/], ['Menu et pied de page', /^(nav\.|footer\.|meta\.)/]
+  ['Accueil', /^acc\./], ['Services', /^(svc\.|services\.|how\.)/], ['Acheteurs', /^(buyers\.|eudr\.)/], ['Producteurs', /^producers\./],
+  ['Partenaires', /^partners\./], ['Impact', /^(impact\.|kpi\.)/], ['Pages légales', /^(privacy\.|legal\.)/], ['Menu et pied de page', /^(nav\.|footer\.|meta\.)/]
 ];
 const SVC = [['m1', 'Traçabilité et ordres d\'achat'], ['m2', 'Paiements et bons électroniques pour ONG'], ['m3', 'Conseil agricole, prix et alertes élevage'], ['m4', 'Crédit à partir de l\'historique']];
 const GLOBAL = [['contact_email', 'E-mail de contact'], ['contact_phone', 'Téléphone'], ['contact_address', 'Adresse (Goma)'], ['legal_publisher', 'Éditeur du site (mentions légales)'],

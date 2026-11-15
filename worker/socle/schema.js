@@ -221,7 +221,9 @@ export const MIGRATIONS = [
     await env.DB.batch(st);
     const d = await env.DB.prepare("SELECT value FROM settings WHERE key = 'demo_enabled'").first();
     if (d?.value === '1') { const { seedPortalDemo } = await import('./demo.js'); await seedPortalDemo(env); }
-  } }
+  } },
+  // Migration 3 : profil déclaré dans le formulaire de démonstration de la page d'accueil
+  { id: 3, sql: "ALTER TABLE demo_requests ADD COLUMN profile TEXT" }
 ];
 
 let ready = null;

@@ -44,11 +44,20 @@ async function publicStats(env) {
   try { if (await tableExists(env, 'weighings')) tonnes = ((await one(env, "SELECT SUM(net_kg) s FROM weighings WHERE status = 'valid'"))?.s || 0) / 1000; } catch {}
   try { if (await tableExists(env, 'payments')) paid = (await one(env, "SELECT SUM(amount_cdf) s FROM payments WHERE status = 'paid'"))?.s || 0; } catch {}
   const women = prods.filter(p => p.sex === 'F').length;
+  // Part des paiements versés à des femmes, sur leur propre compte (table des paiements livrée à l'étape e)
+  let womenPaidPct = null;
+  try {
+    if (await tableExists(env, 'payments')) {
+      const r = await one(env, "SELECT COUNT(*) n, SUM(CASE WHEN p.sex = 'F' THEN 1 ELSE 0 END) f FROM payments pay JOIN producers p ON p.id = pay.producer_id WHERE pay.status = 'paid'");
+      if (r?.n) womenPaidPct = Math.round(r.f / r.n * 100);
+    }
+  } catch {}
+  const rate = Number((await one(env, "SELECT value FROM settings WHERE key = 'exchange_rate'"))?.value) || 0;
   return {
     producers: prods.length,
     women_pct: prods.length >= 5 ? Math.round(women / prods.length * 100) : null,
     with_plot: prods.filter(p => p.plots > 0).length,
-    tonnes: Math.round(tonnes * 10) / 10, paid_cdf: Math.round(paid),
+    tonnes: Math.round(tonnes * 10) / 10, paid_cdf: Math.round(paid), paid_usd: rate ? Math.round(paid / rate) : null, women_paid_pct: womenPaidPct,
     territories: Object.values(terr).map(t => ({ id: t.id, name: t.name, province: t.province, producers: t.n >= 5 ? t.n : null, lt5: t.n < 5 }))
   };
 }
@@ -212,8 +221,9 @@ export async function routePublic(env, req, path) {
     const email = b.email ? String(b.email).trim().toLowerCase() : null; if (email && !isEmail(email)) fail(400, 'Adresse e-mail invalide');
     if (!phone && !email) fail(400, 'Indiquez un téléphone ou un e-mail');
     const id = uuid();
-    await env.DB.prepare('INSERT INTO demo_requests (id, name, organization, phone, email, message, lang, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, name, str(b.organization, 120), phone, email, str(b.message, 1500), LANGS.includes(b.lang) ? b.lang : 'fr', ip, now()).run();
+    const profile = ['buyer', 'cooperative', 'ngo', 'other'].includes(b.profile) ? b.profile : null;
+    await env.DB.prepare('INSERT INTO demo_requests (id, name, organization, phone, email, message, lang, profile, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(id, name, str(b.organization, 120), phone, email, str(b.message, 1500), LANGS.includes(b.lang) ? b.lang : 'fr', profile, ip, now()).run();
     await audit(env, null, 'demo_request.created', 'demo_requests', id, null, { name, organization: b.organization || null }, req);
     return json({ ok: true }, 201);
   }

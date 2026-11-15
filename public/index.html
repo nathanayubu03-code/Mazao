@@ -3,20 +3,385 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KivuTrace &amp; Market : café, cacao et vivres du Kivu tracés du champ au paiement</title>
-<meta name="description" content="Traçabilité café et cacao, ordres d'achat, dossiers EUDR et paiement direct Mobile Money pour les producteurs du Nord-Kivu et du Sud-Kivu.">
-<meta name="theme-color" content="#005F73">
+<title>KivuTrace &amp; Market : du champ au paiement, chaque kilo a une origine vérifiable</title>
+<meta name="description" content="KivuTrace & Market relie les acheteurs aux producteurs du Kivu : ordres d'achat, pesée hors ligne, paiement direct en Mobile Money et dossier de traçabilité EUDR.">
+<meta name="theme-color" content="#0B2027">
 <link rel="icon" href="/assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/app.css">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/accueil.css">
 <link rel="modulepreload" href="/js/site/core.js">
-<script>try{var t=localStorage.getItem('kt.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
-<body class="site" data-page="home">
-<div class="wrap" style="padding:40px 16px"><div class="sk sk-line" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
-<noscript><p style="padding:20px">KivuTrace &amp; Market : activez JavaScript pour afficher ce site.</p></noscript>
-<script type="module" src="/js/site/pages.js"></script>
+<body class="acc">
+<!-- Page d'accueil publique : maquette « KivuTrace & Market, page d'accueil » convertie en HTML.
+     Les textes portent data-i18n (traduction et remplacements saisis dans /admin › Contenu du site). -->
+<div class="a-demo" id="demoBanner" hidden data-i18n="demo.banner">Données fictives : la plateforme est en mode démonstration.</div>
+<div class="a-page">
+
+<!-- NAVIGATION -->
+<header class="a-head">
+<div class="a-head-in">
+<a href="#accueil" class="a-brand">
+<img class="a-logo" src="/assets/logo-mark.png" alt="" width="42" height="42">
+<span class="a-brand-txt">
+<span class="a-brand-name">KivuTrace &amp; Market</span>
+<span class="a-brand-sub" data-i18n="acc.brand_sub">Traçabilité et paiement direct, RDC</span>
+</span>
+</a>
+<nav aria-label="Navigation principale" class="a-nav">
+<a href="#services" data-i18n="acc.nav.services">Services</a>
+<a href="#fonctionnement" data-i18n="acc.nav.how">Comment ça marche</a>
+<a href="#pour-qui" data-tab-link="acheteurs" data-i18n="acc.nav.buyers">Acheteurs</a>
+<a href="#pour-qui" data-tab-link="producteurs" data-i18n="acc.nav.producers">Producteurs</a>
+<a href="#pour-qui" data-tab-link="partenaires" data-i18n="acc.nav.partners">Partenaires</a>
+<a href="#eudr" data-i18n="acc.nav.eudr">EUDR</a>
+</nav>
+<div class="a-head-act">
+<label for="kt-lang" class="a-sr" data-i18n="nav.lang">Langue</label>
+<select id="kt-lang" class="a-lang">
+<option value="fr">FR</option><option value="en">EN</option><option value="sw">SW</option><option value="ln">LN</option>
+</select>
+<a class="kt-btn a-login" href="/connexion" data-i18n="nav.login">Connexion</a>
+<a class="kt-btn a-signup" href="/inscription" data-i18n="nav.signup">S'inscrire</a>
+</div>
+</div>
+</header>
+
+<!-- HERO -->
+<section id="accueil" class="a-hero">
+<div class="kt-rise a-hero-txt">
+<span class="a-pill"><span class="a-dot"></span><span data-i18n="acc.hero.badge">Café, cacao et vivres du Nord-Kivu et du Sud-Kivu</span></span>
+<h1 class="a-h1"><span data-i18n="acc.hero.title">Du champ au paiement, chaque kilo a une origine</span> <span class="a-em" data-i18n="acc.hero.title_em">vérifiable</span>.</h1>
+<p class="a-lead" data-i18n="acc.hero.lead">KivuTrace &amp; Market relie les acheteurs aux producteurs du Kivu. Ordres d'achat, pesée hors ligne, paiement direct en Mobile Money et dossier de traçabilité EUDR, sur une seule plateforme.</p>
+<div class="a-cta">
+<a class="kt-btn a-btn-pri" href="/inscription?profil=buyer"><span data-i18n="acc.hero.cta_buyer">Je suis acheteur</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></a>
+<a class="kt-btn a-btn-out" href="/inscription?profil=cooperative" data-i18n="acc.hero.cta_partner">Je suis une organisation partenaire</a>
+</div>
+<div class="a-note">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+<span data-i18n="acc.hero.phone_note">Les producteurs n'ont besoin que d'un téléphone simple : SMS et code USSD.</span>
+</div>
+</div>
+
+<!-- Visuel animé : parcours d'un lot -->
+<div class="a-hero-vis">
+<div class="a-vis">
+<svg viewBox="0 0 560 520" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" aria-hidden="true" class="a-vis-svg">
+<g fill="none" stroke="#1E4A52" stroke-width="1">
+<path d="M-20 420 C 80 360, 160 400, 240 340 S 400 250, 600 300"></path>
+<path d="M-20 450 C 90 390, 170 430, 250 372 S 410 285, 600 332"></path>
+<path d="M-20 480 C 100 420, 180 460, 260 404 S 420 320, 600 364"></path>
+<path d="M120 260 C 150 200, 230 190, 260 230 S 300 300, 220 310 S 100 310, 120 260 Z"></path>
+<path d="M140 262 C 165 215, 228 208, 250 238 S 278 290, 218 296 S 125 300, 140 262 Z"></path>
+<path d="M162 264 C 180 232, 224 228, 238 248 S 254 280, 214 284 S 152 290, 162 264 Z"></path>
+<path d="M330 150 C 370 100, 450 110, 470 160 S 440 240, 380 230 S 300 200, 330 150 Z"></path>
+<path d="M352 156 C 382 122, 440 128, 454 164 S 430 220, 384 212 S 330 190, 352 156 Z"></path>
+<path d="M-20 120 C 60 90, 120 140, 200 110 S 340 40, 600 70"></path>
+<path d="M-20 90 C 70 60, 130 110, 210 80 S 350 10, 600 40"></path>
+</g>
+<g fill="#3E6E76">
+<circle cx="60" cy="200" r="2"></circle><circle cx="96" cy="340" r="2"></circle><circle cx="300" cy="420" r="2"></circle><circle cx="420" cy="300" r="2"></circle><circle cx="500" cy="210" r="2"></circle><circle cx="250" cy="150" r="2"></circle><circle cx="470" cy="420" r="2"></circle>
+</g>
+<path class="kt-draw" pathLength="1" d="M200 262 C 260 300, 300 330, 340 300 S 420 220, 470 190" fill="none" stroke="#E09F3E" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1"></path>
+<circle class="kt-pulse" cx="200" cy="262" r="9" fill="#94D2BD"></circle>
+<circle cx="200" cy="262" r="6" fill="#94D2BD"></circle>
+<circle class="kt-pulse a-delay12" cx="470" cy="190" r="9" fill="#E09F3E"></circle>
+<circle cx="470" cy="190" r="6" fill="#E09F3E"></circle>
+<rect x="334" y="294" width="12" height="12" rx="3" fill="#F5F7F6"></rect>
+</svg>
+
+<div class="a-vis-label"><span class="a-vis-dot"></span><span data-i18n="acc.anim.label">Parcours d'un lot, exemple</span></div>
+
+<div class="kt-seq kt-d1 a-c a-c1">
+<div class="a-c-h">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span data-i18n="acc.anim.s1">01 · Parcelle géolocalisée</span></div>
+<div class="a-c-t">Minova, Kalehe</div>
+<div class="a-c-s" data-i18n="acc.anim.s1_d">Café arabica · 1,8 ha · point GPS</div>
+</div>
+
+<div class="kt-seq kt-d2 kt-float a-c a-c2">
+<div class="a-sms-h"><span class="a-sms-from">SMS · KivuTrace</span><span>08:42</span></div>
+<div class="a-sms-in">Jambo! Ordre ouvert : kahawa daraja 1 huko Minova, tarehe 18. Jibu NDIYO + kilo.</div>
+<div class="a-sms-out">NDIYO 120</div>
+<div class="a-sms-step" data-i18n="acc.anim.s2">02 · Ordre confirmé par SMS</div>
+</div>
+
+<div class="kt-seq kt-d3 a-c a-c3">
+<div class="a-c-h">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"></path><path d="M5 7h14"></path><path d="M5 7l-3 7a3 3 0 0 0 6 0z"></path><path d="M19 7l-3 7a3 3 0 0 0 6 0z"></path></svg><span data-i18n="acc.anim.s3">03 · Pesée hors ligne</span></div>
+<div class="a-weight"><span class="a-weight-n">120</span><span class="a-c-u" data-i18n="acc.anim.s3_unit">kg · grade 1</span></div>
+<div class="a-c-s" data-i18n="acc.anim.s3_d">Prix verrouillé par l'ordre d'achat</div>
+</div>
+
+<div class="kt-seq kt-d4 a-c a-c4">
+<div class="a-c-h a-c-h4">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18"></path><path d="M16 15h2"></path></svg><span data-i18n="acc.anim.s4">04 · Paiement envoyé</span></div>
+<div class="a-c4-t" data-i18n="acc.anim.s4_t">Mobile Money · reçu SMS</div>
+<div class="a-c4-s" data-i18n="acc.anim.s4_d">Lot lié à la parcelle et à l'acheteur</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- CHIFFRES -->
+<section aria-label="Chiffres clés" class="a-kpis-sec">
+<div class="a-kpis">
+<div class="a-kpi"><div class="a-kpi-v"><span data-stat="producers">[N]</span></div><div class="a-kpi-l" data-i18n="acc.kpi.producers">producteurs inscrits</div></div>
+<div class="a-kpi"><div class="a-kpi-v"><span data-stat="tonnes">[N]</span> t</div><div class="a-kpi-l" data-i18n="acc.kpi.tonnes">de produits tracés</div></div>
+<div class="a-kpi"><div class="a-kpi-v"><span data-stat="paid_usd">[N]</span> $</div><div class="a-kpi-l" data-i18n="acc.kpi.paid">versés directement aux producteurs</div></div>
+<div class="a-kpi"><div class="a-kpi-v"><span data-stat="women_paid_pct">[N]</span> %</div><div class="a-kpi-l" data-i18n="acc.kpi.women">de femmes payées sur leur propre compte</div></div>
+</div>
+<p class="a-kpi-note" data-i18n="acc.kpi.note">Chiffres réels du pilote, mis à jour automatiquement dès son lancement.</p>
+</section>
+
+<!-- SERVICES -->
+<section id="services" class="a-svc-sec">
+<div class="a-wrap a-svc-in">
+<div class="a-sec-top">
+<div class="a-sec-top-l">
+<div class="a-kick" data-i18n="acc.svc.kicker">Nos services</div>
+<h2 class="a-h2" data-i18n="acc.svc.title">Une base commune, des modules qui s'ajoutent</h2>
+</div>
+<p class="a-sec-top-r" data-i18n="acc.svc.lead">Un producteur inscrit une fois sert à la vente, au paiement, aux alertes et au conseil. Chaque nouveau module profite du même réseau.</p>
+</div>
+<div class="a-svc-grid">
+
+<article class="kt-card a-svc a-svc-dark" data-svc="m1">
+<div class="a-svc-top">
+<span class="a-svc-ic a-svc-ic-dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg></span>
+<span class="a-badge a-badge-ok" data-badge>Disponible</span>
+</div>
+<h3 class="a-h3" data-i18n="acc.svc.m1.t">Traçabilité et ordres d'achat</h3>
+<p class="a-svc-p" data-i18n="acc.svc.m1.d">Les acheteurs publient leurs ordres, les producteurs confirment par SMS, chaque lot est relié à ses parcelles. Export GeoJSON pour l'EUDR.</p>
+</article>
+
+<article class="kt-card a-svc" data-svc="m2">
+<div class="a-svc-top">
+<span class="a-svc-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#005F73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 10h18"></path><path d="M16 15h2"></path></svg></span>
+<span class="a-badge a-badge-soon" data-badge>Bientôt</span>
+</div>
+<h3 class="a-h3" data-i18n="acc.svc.m2.t">Paiements et bons électroniques</h3>
+<p class="a-svc-p" data-i18n="acc.svc.m2.d">Pour les ONG et les projets : bons d'intrants, transferts Mobile Money, vérification sur place et suivi après distribution.</p>
+</article>
+
+<article class="kt-card a-svc" data-svc="m3">
+<div class="a-svc-top">
+<span class="a-svc-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#005F73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22V12"></path><path d="M12 12c0-4 3-7 8-7 0 5-3 8-8 7z"></path><path d="M12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 5.5z"></path></svg></span>
+<span class="a-badge a-badge-soon" data-badge>Bientôt</span>
+</div>
+<h3 class="a-h3" data-i18n="acc.svc.m3.t">Conseil, prix et alertes élevage</h3>
+<p class="a-svc-p" data-i18n="acc.svc.m3.d">Messages vocaux en swahili et en lingala, rappels de vaccination, alertes maladies et prix des marchés proches.</p>
+</article>
+
+<article class="kt-card a-svc" data-svc="m4">
+<div class="a-svc-top">
+<span class="a-svc-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#005F73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 5-6"></path></svg></span>
+<span class="a-badge a-badge-soon" data-badge>Bientôt</span>
+</div>
+<h3 class="a-h3" data-i18n="acc.svc.m4.t">Crédit sur historique</h3>
+<p class="a-svc-p" data-i18n="acc.svc.m4.d">L'historique des livraisons et des paiements devient un dossier de crédit partagé, avec l'accord du producteur, aux institutions de microfinance.</p>
+</article>
+
+</div>
+</div>
+</section>
+
+<!-- COMMENT ÇA MARCHE -->
+<section id="fonctionnement" class="a-wrap a-how-sec">
+<div class="a-center">
+<div class="a-kick" data-i18n="acc.how.kicker">Comment ça marche</div>
+<h2 class="a-h2" data-i18n="acc.how.title">Quatre étapes, même sans réseau au village</h2>
+</div>
+<div class="a-how">
+<div class="a-step">
+<div class="a-step-h"><span class="a-step-n">1</span><span class="a-step-line"></span></div>
+<h3 class="a-h3s" data-i18n="acc.how.1.t">L'acheteur publie un ordre</h3>
+<p class="a-step-p" data-i18n="acc.how.1.d">Filière, grade, volume, prix, point et date de collecte.</p>
+</div>
+<div class="a-step">
+<div class="a-step-h"><span class="a-step-n">2</span><span class="a-step-line"></span></div>
+<h3 class="a-h3s" data-i18n="acc.how.2.t">Le producteur confirme par SMS</h3>
+<p class="a-step-p" data-i18n="acc.how.2.d">Il reçoit l'offre en swahili et répond avec le volume qu'il apporte.</p>
+</div>
+<div class="a-step">
+<div class="a-step-h"><span class="a-step-n">3</span><span class="a-step-line"></span></div>
+<h3 class="a-h3s" data-i18n="acc.how.3.t">L'agent pèse sur place</h3>
+<p class="a-step-p" data-i18n="acc.how.3.d">Hors ligne, au prix verrouillé de l'ordre. Synchronisation au retour du réseau.</p>
+</div>
+<div class="a-step">
+<div class="a-step-h"><span class="a-step-n a-step-n4">4</span></div>
+<h3 class="a-h3s" data-i18n="acc.how.4.t">Le paiement part en Mobile Money</h3>
+<p class="a-step-p" data-i18n="acc.how.4.d">M-Pesa, Airtel Money ou Orange Money, avec reçu SMS au producteur.</p>
+</div>
+</div>
+</section>
+
+<!-- POUR QUI (onglets) -->
+<section id="pour-qui" class="a-who-sec">
+<div class="a-wrap a-who-in">
+<div class="a-who-top">
+<div>
+<div class="a-kick" data-i18n="acc.who.kicker">Pour qui ?</div>
+<h2 class="a-h2" data-i18n="acc.who.title">Chacun y trouve son intérêt</h2>
+</div>
+<div role="tablist" aria-label="Profils" class="a-tabs">
+<button type="button" role="tab" id="tab-acheteurs" aria-controls="panel-acheteurs" aria-selected="true" class="a-tab" data-tab="acheteurs" data-i18n="acc.who.tab.buyers">Acheteurs</button>
+<button type="button" role="tab" id="tab-producteurs" aria-controls="panel-producteurs" aria-selected="false" tabindex="-1" class="a-tab" data-tab="producteurs" data-i18n="acc.who.tab.producers">Producteurs</button>
+<button type="button" role="tab" id="tab-partenaires" aria-controls="panel-partenaires" aria-selected="false" tabindex="-1" class="a-tab" data-tab="partenaires" data-i18n="acc.who.tab.partners">ONG et coopératives</button>
+</div>
+</div>
+
+<div class="a-panel" id="panel-acheteurs" role="tabpanel" aria-labelledby="tab-acheteurs">
+<div class="a-panel-l">
+<h3 class="a-h3l" data-i18n="acc.who.b.t">Acheteurs : exportateurs, transformateurs, coopératives</h3>
+<p class="a-muted" data-i18n="acc.who.b.d">Approvisionnez-vous directement auprès des producteurs, avec un dossier de traçabilité prêt pour vos clients européens.</p>
+<div class="a-checks">
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.b.p1">Ordres d'achat diffusés par SMS dans les zones choisies</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.b.p2">Volumes confirmés puis pesés, suivis en temps réel</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.b.p3">Lot relié aux parcelles, export GeoJSON pour la déclaration EUDR</span></div>
+</div>
+<a class="kt-btn a-btn-panel" href="/inscription?profil=buyer" data-i18n="acc.who.b.cta">Créer un compte acheteur</a>
+</div>
+<div class="a-panel-r">
+<div class="a-prev-k" data-i18n="acc.who.b.preview">Aperçu de l'espace acheteur</div>
+<div class="a-prev-box">
+<div class="a-prev-row"><span class="a-prev-t" data-i18n="acc.who.b.order">Ordre · Café arabica grade 1</span><span class="a-prev-place">Minova</span></div>
+<div class="a-prev-l a-prev-l1" data-i18n="acc.who.b.confirmed">Confirmé</div>
+<div class="a-bar"><div class="a-bar-f a-bar-72"></div></div>
+<div class="a-prev-l a-prev-l2" data-i18n="acc.who.b.weighed">Pesé</div>
+<div class="a-bar"><div class="a-bar-f a-bar-45"></div></div>
+</div>
+<p class="a-prev-note" data-i18n="acc.who.example">Illustration de l'interface, valeurs d'exemple.</p>
+</div>
+</div>
+
+<div class="a-panel" id="panel-producteurs" role="tabpanel" aria-labelledby="tab-producteurs" hidden>
+<div class="a-panel-l">
+<h3 class="a-h3l" data-i18n="acc.who.p.t">Producteurs et productrices</h3>
+<p class="a-muted" data-i18n="acc.who.p.d">Pas besoin de smartphone ni d'internet. L'inscription se fait auprès d'un agent de collecte ou par code USSD.</p>
+<div class="a-checks">
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.p.p1">Les offres d'achat arrivent par SMS, avec le prix affiché avant la vente</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.p.p2">Paiement sur votre propre compte Mobile Money</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.p.p3">Vos données ne sont partagées qu'avec votre accord</span></div>
+</div>
+</div>
+<div class="a-panel-r a-panel-r-c">
+<div class="a-phone">
+<div class="a-phone-scr"><span data-ussd>*[CODE]#</span><br><span data-i18n="acc.who.p.m1">1. Ordres ouverts</span><br><span data-i18n="acc.who.p.m2">2. Mes paiements</span><br><span data-i18n="acc.who.p.m3">3. Mes livraisons</span><br><span data-i18n="acc.who.p.m4">4. Aide</span></div>
+<div class="a-keys">
+<span></span><span></span><span></span>
+<span></span><span></span><span></span>
+</div>
+</div>
+<p class="a-prev-note" data-i18n="acc.who.p.ussd_note">Menu USSD, fonctionne sur un téléphone simple</p>
+</div>
+</div>
+
+<div class="a-panel" id="panel-partenaires" role="tabpanel" aria-labelledby="tab-partenaires" hidden>
+<div class="a-panel-l">
+<h3 class="a-h3l" data-i18n="acc.who.o.t">ONG, coopératives et projets</h3>
+<p class="a-muted" data-i18n="acc.who.o.d">Suivez vos producteurs, vos paiements et vos indicateurs sans multiplier les outils de collecte.</p>
+<div class="a-checks">
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.o.p1">Indicateurs ventilés par sexe, territoire et filière, comparés à la situation de référence</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.o.p2">Exports CSV pour vos rapports aux bailleurs</span></div>
+<div class="a-check"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-i18n="acc.who.o.p3">Mécanisme de retour des bénéficiaires par SMS</span></div>
+</div>
+<a class="kt-btn a-btn-panel" href="#demo" data-i18n="acc.who.o.cta">Demander une démonstration</a>
+</div>
+<div class="a-panel-r">
+<div class="a-prev-k" data-i18n="acc.who.o.preview">Aperçu du tableau de bord</div>
+<div class="a-chart">
+<span class="a-col a-col-40"></span>
+<span class="a-col a-col-58"></span>
+<span class="a-col a-col-50"></span>
+<span class="a-col a-col-76"></span>
+<span class="a-col a-col-88"></span>
+</div>
+<p class="a-prev-note" data-i18n="acc.who.example">Illustration de l'interface, valeurs d'exemple.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- EUDR -->
+<section id="eudr" class="a-eudr-sec">
+<div class="a-wrap a-eudr-in">
+<div class="a-eudr-l">
+<div class="a-kick" data-i18n="acc.eudr.kicker">Règlement européen sur la déforestation</div>
+<h2 class="a-h2 a-h2-0" data-i18n="acc.eudr.title">Le café et le cacao vendus en Europe devront prouver leur origine</h2>
+<p class="a-eudr-p" data-i18n="acc.eudr.lead">KivuTrace &amp; Market rassemble les données que vos importateurs vont vous demander : où, par qui, quand, et dans quel lot.</p>
+<div class="a-dates">
+<div class="a-date"><div class="a-date-v" data-eudr="eudr_date_large">30 déc. 2026</div><div class="a-date-l" data-i18n="acc.eudr.d1">Moyens et grands opérateurs</div></div>
+<div class="a-date"><div class="a-date-v" data-eudr="eudr_date_small">30 juin 2027</div><div class="a-date-l" data-i18n="acc.eudr.d2">Micro et petits opérateurs</div></div>
+</div>
+</div>
+<div class="a-eudr-r">
+<h3 class="a-h3" data-i18n="acc.eudr.box">Ce que la plateforme fournit</h3>
+<div class="a-eitem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94D2BD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg><span data-i18n="acc.eudr.e1">Géolocalisation des parcelles : un point sous 4 ha, un polygone au-delà</span></div>
+<div class="a-eitem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94D2BD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"></path><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg><span data-i18n="acc.eudr.e2">Lien parcelle, producteur, lot et acheteur</span></div>
+<div class="a-eitem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94D2BD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path><path d="M9 12l2 2 4-4"></path></svg><span data-i18n="acc.eudr.e3">Consentement du producteur enregistré</span></div>
+<div class="a-eitem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94D2BD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg><span data-i18n="acc.eudr.e4">Export GeoJSON pour la déclaration de diligence raisonnable</span></div>
+<p class="a-eudr-note" data-i18n="acc.eudr.note">La plateforme fournit les données de traçabilité. La vérification de non-déforestation après le 31 décembre 2020 se fait avec une couche forestière officielle.</p>
+</div>
+</div>
+</section>
+
+<!-- DONNÉES PROTÉGÉES -->
+<section class="a-wrap a-priv">
+<span class="a-priv-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#005F73" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span>
+<div class="a-priv-txt">
+<h2 class="a-h2s" data-i18n="acc.priv.t">Les données des producteurs restent protégées</h2>
+<p class="a-muted a-mt6" data-i18n="acc.priv.d">Noms, téléphones et coordonnées GPS ne sont visibles que par la coordination. Les acheteurs voient uniquement leurs propres lots, et les cartes publiques montrent des totaux par groupement.</p>
+</div>
+<a href="/confidentialite" class="a-priv-link" data-i18n="acc.priv.link">Lire notre politique</a>
+</section>
+
+<!-- DEMANDE DE DÉMO -->
+<section id="demo" class="a-wrap a-demo-sec">
+<div class="a-demo-box">
+<div class="a-demo-l">
+<div class="a-kick" data-i18n="acc.demo.kicker">Démonstration</div>
+<h2 class="a-h2 a-h2-36 a-h2-0" data-i18n="acc.demo.title">Voyons ensemble votre filière</h2>
+<p class="a-muted" data-i18n="acc.demo.lead">Dites-nous ce que vous achetez ou accompagnez. Nous vous montrons la plateforme avec un exemple adapté à votre zone.</p>
+</div>
+<form id="demo-form" class="a-form" novalidate>
+<label class="a-fl"><span data-i18n="acc.demo.name">Nom complet</span><input type="text" name="name" autocomplete="name" required class="a-in"></label>
+<label class="a-fl"><span data-i18n="acc.demo.org">Organisation</span><input type="text" name="organization" autocomplete="organization" class="a-in"></label>
+<label class="a-fl"><span data-i18n="acc.demo.phone">Téléphone</span><input type="tel" name="phone" placeholder="+243" autocomplete="tel" required class="a-in"></label>
+<label class="a-fl"><span data-i18n="acc.demo.profile">Vous êtes</span>
+<select name="profile" class="a-in a-sel">
+<option value="buyer" data-i18n="acc.demo.p1">Acheteur ou exportateur</option><option value="cooperative" data-i18n="acc.demo.p2">Coopérative</option><option value="ngo" data-i18n="acc.demo.p3">ONG ou projet</option><option value="other" data-i18n="acc.demo.p4">Autre</option>
+</select></label>
+<label class="a-fl a-full"><span data-i18n="acc.demo.message">Message</span><textarea name="message" rows="3" class="a-in a-ta"></textarea></label>
+<input type="text" name="website" class="a-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<p class="a-full a-err" id="demo-err" role="alert"></p>
+<button class="kt-btn a-send" type="submit" data-i18n="acc.demo.send">Envoyer la demande</button>
+</form>
+</div>
+</section>
+
+<!-- PIED DE PAGE -->
+<footer class="a-foot">
+<div class="a-foot-in">
+<div class="a-foot-l">
+<span class="a-foot-brand"><img class="a-logo a-logo-f" src="/assets/logo-mark.png" alt="" width="36" height="36">KivuTrace &amp; Market</span>
+<span class="a-foot-s" data-i18n="acc.foot.city">Goma, Nord-Kivu, République démocratique du Congo</span>
+<span class="a-foot-s"><span data-contact="contact_phone">[Téléphone]</span> · <span data-contact="contact_email">[E-mail]</span></span>
+</div>
+<nav aria-label="Liens du pied de page" class="a-foot-nav">
+<a href="/services" data-i18n="acc.nav.services">Services</a>
+<a href="/acheteurs" data-i18n="acc.nav.buyers">Acheteurs</a>
+<a href="/producteurs" data-i18n="acc.nav.producers">Producteurs</a>
+<a href="/partenaires" data-i18n="acc.nav.partners">Partenaires</a>
+<a href="/confidentialite" data-i18n="footer.privacy">Protection des données</a>
+<a href="/mentions-legales" data-i18n="footer.legal">Mentions légales</a>
+</nav>
+</div>
+<div class="a-foot-copy">© 2026 KivuTrace &amp; Market</div>
+</footer>
+
+</div>
+<script type="module" src="/js/site/accueil.js"></script>
 </body>
 </html>
