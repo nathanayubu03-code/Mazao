@@ -2,8 +2,8 @@
    - App shell (index.html) : réseau d'abord, cache en secours
    - Librairies CDN, polices : cache d'abord
    - Tuiles cartographiques : cache opportuniste (les zones déjà consultées restent visibles hors ligne) */
-const VERSION = 'kivutrace-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const VERSION = 'kivutrace-v2';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
