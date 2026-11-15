@@ -14,7 +14,7 @@
       "binding": "DB",
       "database_name": "kivutrace",
       // Identifiant de la base D1 créée dans le tableau de bord Cloudflare
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "3e53bb61-6b8d-4330-8366-ca3daf43f012"
     }
   ],
   // Purge quotidienne de la corbeille (éléments supprimés depuis plus de 30 jours)
