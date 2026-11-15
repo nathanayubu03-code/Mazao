@@ -3,6 +3,9 @@
   "name": "mazao",
   "main": "worker/index.js",
   "compatibility_date": "2025-09-01",
+  // Adresse publique et adresses d'aperçu des branches activées
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
