@@ -1,0 +1,14 @@
+{
+  "name": "KivuTrace & Market",
+  "short_name": "KivuTrace",
+  "description": "Traçabilité agricole, cartographie EUDR et paiements Mobile Money pour les coopératives du Kivu.",
+  "start_url": "./index.html#agent",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F7FB",
+  "theme_color": "#005A8D",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

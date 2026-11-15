@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KivuTrace & Market</title>
+<meta name="description" content="Traçabilité agricole, cartographie EUDR, collecte groupée et paiement Mobile Money pour les coopératives du Kivu (RDC). MVP offline-first.">
+<meta name="theme-color" content="#005A8D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+<style>
+/* =========================================================================
+   1. DESIGN TOKENS
+   ========================================================================= */
+:root{
+  --blue:#0077B6; --blue-dark:#005A8D; --blue-ink:#023E62;
+  --green:#2D6A4F; --green-light:#D8F3DC;
+  --bg:#FFFFFF; --bg-soft:#F2F7FB; --line:#D6E2EC; --line-strong:#B8CCDB;
+  --ink:#0F2233; --ink-2:#3A5166; --ink-3:#6A8094;
+  --amber:#E07A5F; --amber-light:#FCEBE5;
+  --red:#D62828; --red-light:#FBE3E3;
+  --gold:#B7791F; --gold-light:#FDF3DC;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(15,34,51,.06),0 4px 14px rgba(15,34,51,.06);
+  --tap:52px;
+  --font:'Inter','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);color:var(--ink);background:var(--bg-soft);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--blue-dark)}
+h1,h2,h3,h4{margin:0;line-height:1.2}
+.hidden{display:none !important}
+.muted{color:var(--ink-3)}
+.small{font-size:.85rem}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+.nowrap{white-space:nowrap}
+.right{text-align:right}
+
+/* =========================================================================
+   2. HEADER / NAV
+   ========================================================================= */
+.topbar{position:sticky;top:0;z-index:1000;background:var(--blue-dark);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topbar-row{display:flex;align-items:center;gap:10px;padding:10px 16px;max-width:1400px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.brand-logo{width:38px;height:38px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none}
+.brand-logo svg{width:26px;height:26px}
+.brand-txt{min-width:0}
+.brand-txt h1{font-size:1.05rem;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand-txt p{margin:0;font-size:.75rem;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-actions{display:flex;align-items:center;gap:8px;flex:none}
+.net-pill{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:8px 14px;font-weight:700;font-size:.85rem;cursor:pointer;min-height:40px;transition:background .2s}
+.net-pill .dot{width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.net-pill.on{background:var(--green-light);color:var(--green)}
+.net-pill.off{background:var(--amber);color:#fff}
+.icon-btn{position:relative;border:0;background:rgba(255,255,255,.14);color:#fff;width:42px;height:42px;border-radius:10px;cursor:pointer;display:grid;place-items:center;font-size:1.05rem}
+.icon-btn:hover{background:rgba(255,255,255,.24)}
+.badge-count{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;min-width:19px;height:19px;border-radius:10px;display:grid;place-items:center;padding:0 5px}
+.tabs{display:flex;gap:4px;padding:0 16px;max-width:1400px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;color:rgba(255,255,255,.8);padding:12px 16px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;display:flex;gap:8px;align-items:center;min-height:48px}
+.tab:hover{color:#fff}
+.tab.active{color:#fff;border-bottom-color:#fff}
+@media(max-width:480px){.tab{padding:12px 10px;font-size:.88rem;gap:6px}.tab i{display:none}.brand-txt p{display:none}.net-pill{padding:8px 10px}.topbar-row{gap:6px}}
+.offline-banner{background:var(--amber);color:#fff;text-align:center;font-weight:600;font-size:.88rem;padding:8px 16px}
+
+/* =========================================================================
+   3. LAYOUT & CARDS
+   ========================================================================= */
+main{max-width:1400px;margin:0 auto;padding:18px 16px 60px}
+.view{display:none}
+.view.active{display:block}
+.view-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.view-head h2{font-size:1.4rem;font-weight:800;color:var(--blue-ink)}
+.view-head p{margin:4px 0 0;color:var(--ink-2)}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card-head h3{font-size:1.08rem;font-weight:700;color:var(--blue-ink);display:flex;align-items:center;gap:8px}
+.card-head h3 i{color:var(--blue)}
+.grid-2{display:grid;grid-template-columns:1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:repeat(3,1fr)}}
+.field-agent{max-width:760px;margin:0 auto}
+
+/* =========================================================================
+   4. BUTTONS, BADGES, FORMS
+   ========================================================================= */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:var(--radius-sm);padding:10px 16px;min-height:44px;font-weight:600;cursor:pointer;text-decoration:none;transition:filter .15s,background .15s;line-height:1.2}
+.btn:hover{filter:brightness(.95)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-green{background:var(--green);color:#fff}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-ghost{background:var(--bg);color:var(--blue-dark);border-color:var(--line-strong)}
+.btn-ghost:hover{background:var(--bg-soft)}
+.btn-sm{min-height:36px;padding:6px 12px;font-size:.88rem}
+.btn-lg{min-height:var(--tap);padding:14px 20px;font-size:1.02rem;width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:.78rem;font-weight:700;white-space:nowrap}
+.b-green{background:var(--green-light);color:var(--green)}
+.b-blue{background:#DCEEF8;color:var(--blue-dark)}
+.b-amber{background:var(--amber-light);color:#A2462E}
+.b-red{background:var(--red-light);color:var(--red)}
+.b-gold{background:var(--gold-light);color:var(--gold)}
+.b-grey{background:#E9EEF2;color:var(--ink-2)}
+label.lbl{display:block;font-weight:600;font-size:.9rem;margin:0 0 6px;color:var(--ink-2)}
+.form-grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:620px){.form-grid.cols-2{grid-template-columns:1fr 1fr}}
+.full{grid-column:1/-1}
+.input,select.input,textarea.input{width:100%;min-height:var(--tap);border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);padding:12px 14px;background:#fff;font-size:1rem}
+.input:focus{outline:3px solid rgba(0,119,182,.25);border-color:var(--blue)}
+.input.invalid{border-color:var(--red)}
+.hint{font-size:.8rem;color:var(--ink-3);margin-top:4px}
+.err{font-size:.82rem;color:var(--red);margin-top:4px;font-weight:600}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{display:flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);cursor:pointer;font-weight:700;background:#fff}
+.seg input:checked+label{background:var(--blue);border-color:var(--blue);color:#fff}
+.seg input:focus-visible+label{outline:3px solid rgba(0,119,182,.35)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;color:var(--ink-2)}
+.check input{width:22px;height:22px;flex:none;margin-top:1px}
+.total-box{background:var(--bg-soft);border:1px dashed var(--line-strong);border-radius:var(--radius-sm);padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.total-box .k{font-size:.8rem;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.total-box .v{font-size:1.45rem;font-weight:800;color:var(--blue-ink)}
+
+/* Agent subnav (big touch tiles) */
+.subnav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.subnav button{border:1.5px solid var(--line);background:#fff;border-radius:var(--radius);padding:12px 6px;min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:.82rem;color:var(--ink-2);cursor:pointer}
+.subnav button i{font-size:1.35rem;color:var(--blue)}
+.subnav button.active{border-color:var(--blue);background:#E6F3FA;color:var(--blue-ink)}
+.agent-pane{display:none}
+.agent-pane.active{display:block}
+
+/* =========================================================================
+   5. KPI TILES, TABLES, LISTS
+   ========================================================================= */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+@media(min-width:700px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1100px){.kpis.six{grid-template-columns:repeat(6,1fr)}.kpis.four{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .k{font-size:.76rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.kpi .v{font-size:1.65rem;font-weight:800;color:var(--blue-ink);margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:.8rem;color:var(--ink-2);margin-top:2px}
+.kpi.accent{border-left:4px solid var(--green)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+table.tbl{width:100%;border-collapse:collapse;font-size:.88rem;background:#fff}
+.tbl th{background:var(--bg-soft);color:var(--ink-2);text-align:left;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:.8rem;text-transform:uppercase;letter-spacing:.02em}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover td{background:#FAFCFE}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tfoot td{background:var(--bg-soft);font-weight:800;border-top:2px solid var(--line-strong)}
+.tbl tr.subtotal td{background:#F7FAFC;font-weight:700}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(min-width:900px){.filters{grid-template-columns:2fr 1fr 1fr 1fr auto}}
+.filters .input{min-height:44px;padding:8px 12px}
+.empty{text-align:center;color:var(--ink-3);padding:26px 10px}
+.empty i{font-size:1.8rem;display:block;margin-bottom:8px;color:var(--line-strong)}
+.plist{display:grid;gap:10px}
+.pcard{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:var(--radius);padding:12px;background:#fff;cursor:pointer;text-align:left;width:100%}
+.pcard:hover{border-color:var(--blue)}
+.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;flex:none}
+.pcard .meta{flex:1;min-width:0}
+.pcard .meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+
+/* =========================================================================
+   6. MAPS
+   ========================================================================= */
+.map{height:360px;border-radius:var(--radius-sm);border:1px solid var(--line);z-index:1;background:#dfe9f0}
+.map.tall{height:520px}
+@media(max-width:600px){.map.tall{height:420px}}
+.map-fallback{display:grid;place-items:center;height:100%;color:var(--ink-3);text-align:center;padding:20px;font-size:.9rem}
+.pt-icon{background:var(--blue);color:#fff;border:2px solid #fff;border-radius:50%;width:26px !important;height:26px !important;display:grid !important;place-items:center;font-size:12px;font-weight:800;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.gps-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.gps-stats div{background:var(--bg-soft);border-radius:var(--radius-sm);padding:10px;text-align:center}
+.gps-stats .k{font-size:.72rem;color:var(--ink-3);font-weight:700;text-transform:uppercase}
+.gps-stats .v{font-size:1.15rem;font-weight:800;color:var(--blue-ink)}
+.eudr-box{border-radius:var(--radius-sm);padding:12px 14px;font-weight:600;display:flex;gap:10px;align-items:flex-start}
+.eudr-box.ok{background:var(--green-light);color:var(--green)}
+.eudr-box.ko{background:var(--red-light);color:var(--red)}
+.eudr-box.na{background:var(--bg-soft);color:var(--ink-2)}
+.pt-list{max-height:180px;overflow:auto;font-size:.82rem;border:1px solid var(--line);border-radius:var(--radius-sm);margin-top:10px}
+.pt-list div{padding:6px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.pt-list div:last-child{border-bottom:0}
+.leaflet-popup-content{font-family:var(--font);font-size:.85rem;min-width:220px}
+.legend{background:#fff;padding:8px 10px;border-radius:8px;box-shadow:var(--shadow);font-size:.78rem;line-height:1.7}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* =========================================================================
+   7. MODAL, PHONE (SMS), TOASTS
+   ========================================================================= */
+.modal-bg{position:fixed;inset:0;background:rgba(10,25,40,.55);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0}
+@media(min-width:640px){.modal-bg{align-items:center;padding:20px}}
+.modal{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+@media(min-width:640px){.modal{border-radius:16px}}
+.modal.wide{max-width:900px}
+.modal-head{position:sticky;top:0;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);z-index:2}
+.modal-head h3{font-size:1.1rem;color:var(--blue-ink)}
+.modal-body{padding:18px}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line);background:var(--bg-soft);position:sticky;bottom:0}
+.close-x{border:0;background:var(--bg-soft);width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:1.1rem}
+.phone{width:290px;max-width:100%;margin:0 auto;background:#1b2530;border-radius:34px;padding:14px 10px 18px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.phone-notch{width:90px;height:6px;border-radius:4px;background:#3a4a58;margin:2px auto 10px}
+.phone-screen{background:#ECE9E4;border-radius:22px;min-height:360px;max-height:460px;overflow:auto;padding:0 0 10px}
+.phone-bar{background:#2D6A4F;color:#fff;padding:12px 14px;font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:8px;border-radius:22px 22px 0 0;position:sticky;top:0}
+.phone-bar small{display:block;font-weight:500;opacity:.85;font-size:.72rem}
+.sms{background:#fff;margin:10px 10px 0;padding:10px 12px;border-radius:4px 14px 14px 14px;font-size:.86rem;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.sms .to{font-size:.72rem;color:var(--green);font-weight:700;margin-bottom:3px}
+.sms .t{font-size:.68rem;color:var(--ink-3);text-align:right;margin-top:4px}
+.sms.new{animation:pop .4s ease}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:4000;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
+.toast{background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:.9rem;display:flex;gap:10px;align-items:flex-start;animation:pop .25s ease}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+.toast.warn{background:var(--amber)}
+.spinner{width:42px;height:42px;border:4px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:10px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.qr-box{display:flex;justify-content:center;padding:10px;background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);width:fit-content;margin:0 auto}
+.qr-box img,.qr-box canvas{display:block}
+.idcard{border:2px solid var(--blue-dark);border-radius:var(--radius);overflow:hidden;max-width:420px;margin:0 auto}
+.idcard-head{background:var(--blue-dark);color:#fff;padding:10px 14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.idcard-body{display:grid;grid-template-columns:1fr auto;gap:12px;padding:14px;align-items:center}
+.idcard-body dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:.85rem}
+.idcard-body dt{color:var(--ink-3);font-weight:600}
+.idcard-body dd{margin:0;font-weight:600}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.9rem;margin:0}
+.kv dt{color:var(--ink-3);font-weight:600}
+.kv dd{margin:0;font-weight:600}
+.chart-box{position:relative;height:300px}
+.footer-note{font-size:.78rem;color:var(--ink-3);margin-top:20px;text-align:center}
+.print-only{display:none}
+
+/* =========================================================================
+   8. PRINT (rapport bailleurs / fiche producteur)
+   ========================================================================= */
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;font-size:11pt}
+  .topbar,.offline-banner,.toasts,.no-print,.leaflet-control-container{display:none !important}
+  main{padding:0;max-width:none}
+  .card,.kpi{box-shadow:none;break-inside:avoid}
+  .print-only{display:block}
+  .chart-box{height:240px}
+  .map.tall{height:380px}
+  body.printing-modal main{display:none}
+  body.printing-modal .modal-bg{position:static;background:none;display:block;padding:0}
+  body.printing-modal .modal{max-height:none;box-shadow:none;max-width:none}
+  body.printing-modal .modal-head .close-x,body.printing-modal .modal-foot{display:none}
+  body:not(.printing-modal) .modal-bg{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     HEADER : marque, état réseau (simulateur), SMS paysan, paramètres
+     ====================================================================== -->
+<header class="topbar">
+  <div class="topbar-row">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M16 3C9 9 6 14 6 19a10 10 0 0 0 20 0c0-5-3-10-10-16z" fill="#2D6A4F"/><path d="M16 9v19M16 17l-5-4M16 21l5-4" stroke="#D8F3DC" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-txt">
+        <h1>KivuTrace &amp; Market</h1>
+        <p id="coopName">Coopérative KivuTrace</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="netPill" class="net-pill on" title="Simulateur réseau : cliquer pour basculer En ligne / Hors ligne"><span class="dot"></span><span id="netLabel">En ligne</span></button>
+      <button id="smsBtn" class="icon-btn" title="Simulateur SMS paysan"><i class="fa-solid fa-comment-sms"></i><span id="smsCount" class="badge-count hidden">0</span></button>
+      <button id="settingsBtn" class="icon-btn" title="Paramètres"><i class="fa-solid fa-gear"></i></button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-view="agent" role="tab"><i class="fa-solid fa-person-digging"></i> Agent terrain</button>
+    <button class="tab" data-view="coop" role="tab"><i class="fa-solid fa-warehouse"></i> Coopérative <span id="queueTabBadge" class="badge b-amber hidden">0</span></button>
+    <button class="tab" data-view="donor" role="tab"><i class="fa-solid fa-chart-pie"></i> Bailleurs &amp; Export</button>
+  </nav>
+  <div id="offlineBanner" class="offline-banner hidden"><i class="fa-solid fa-plug-circle-xmark"></i> Mode hors ligne : les saisies sont enregistrées sur l'appareil et seront synchronisées au retour du réseau.</div>
+</header>
+
+<main>
+<!-- ======================================================================
+     MODULE 1 : AGENT TERRAIN (mobile-first)
+     ====================================================================== -->
+<section id="view-agent" class="view active">
+  <div class="field-agent">
+    <div class="view-head">
+      <div>
+        <h2>Application Agent terrain</h2>
+        <p id="agentHello" class="small">Masisi, Rutshuru, Beni, Kalehe</p>
+      </div>
+    </div>
+    <div class="subnav">
+      <button class="active" data-pane="register"><i class="fa-solid fa-user-plus"></i>Producteur</button>
+      <button data-pane="parcel"><i class="fa-solid fa-draw-polygon"></i>Parcelle GPS</button>
+      <button data-pane="harvest"><i class="fa-solid fa-scale-balanced"></i>Pesée</button>
+      <button data-pane="list"><i class="fa-solid fa-users"></i>Liste</button>
+    </div>
+
+    <!-- 1a. Enregistrement producteur -->
+    <div id="pane-register" class="agent-pane active">
+      <form id="producerForm" class="card" novalidate>
+        <div class="card-head"><h3><i class="fa-solid fa-id-card"></i> Enregistrer un producteur</h3><span class="badge b-blue" id="nextProdId">KIV-2026-009</span></div>
+        <div class="form-grid cols-2">
+          <div class="full">
+            <label class="lbl" for="pName">Nom complet *</label>
+            <input class="input" id="pName" name="name" autocomplete="off" placeholder="ex : Furaha Mapendo">
+          </div>
+          <div class="full">
+            <span class="lbl">Sexe *</span>
+            <div class="seg">
+              <input type="radio" name="sex" id="sexF" value="F"><label for="sexF"><i class="fa-solid fa-venus"></i> Femme</label>
+              <input type="radio" name="sex" id="sexM" value="M"><label for="sexM"><i class="fa-solid fa-mars"></i> Homme</label>
+            </div>
+          </div>
+          <div>
+            <label class="lbl" for="pPhone">Téléphone (Mobile Money) *</label>
+            <input class="input" id="pPhone" name="phone" type="tel" inputmode="tel" placeholder="+243 81 234 5678">
+            <div class="hint" id="pPhoneHint">Format RDC : +243 suivi de 9 chiffres</div>
+          </div>
+          <div>
+            <label class="lbl" for="pVoter">N° carte d'électeur / ID *</label>
+            <input class="input" id="pVoter" name="voter" autocomplete="off" placeholder="ex : 1104228710">
+          </div>
+          <div>
+            <label class="lbl" for="pVillage">Village / Groupement *</label>
+            <select class="input" id="pVillage" name="village"></select>
+          </div>
+          <div>
+            <label class="lbl" for="pFiliere">Filière principale *</label>
+            <select class="input" id="pFiliere" name="filiere"></select>
+          </div>
+          <div class="full">
+            <label class="check"><input type="checkbox" id="pConsent"> Le producteur a donné son consentement éclairé pour la collecte et l'usage de ses données (traçabilité, paiement, rapports anonymisés).</label>
+          </div>
+        </div>
+        <div id="producerErr" class="err"></div>
+        <div style="margin-top:16px"><button class="btn btn-primary btn-lg" type="submit"><i class="fa-solid fa-floppy-disk"></i> Enregistrer le producteur</button></div>
+      </form>
+    </div>
+
+    <!-- 1b. Cartographie parcelle -->
+    <div id="pane-parcel" class="agent-pane">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-draw-polygon"></i> Cartographier la parcelle (EUDR)</h3><span id="parcelProdBadge" class="badge b-grey">Aucun producteur</span></div>
+        <label class="lbl" for="parcelProducer">Producteur</label>
+        <select class="input" id="parcelProducer"></select>
+        <div class="btn-row" style="margin:12px 0">
+          <button class="btn btn-primary" id="gpsRealBtn" type="button" style="flex:1 1 200px"><i class="fa-solid fa-location-crosshairs"></i> Capturer ma position GPS actuelle</button>
+          <button class="btn btn-green" id="gpsSimBtn" type="button" style="flex:1 1 200px"><i class="fa-solid fa-satellite-dish"></i> Simuler un relevé GPS terrain</button>
+        </div>
+        <div id="parcelMap" class="map"></div>
+        <div class="hint">Astuce : marchez jusqu'à chaque coin de la parcelle et capturez un point. Vous pouvez aussi toucher la carte pour placer un sommet.</div>
+        <div class="gps-stats">
+          <div><div class="k">Points</div><div class="v" id="gpsCount">0</div></div>
+          <div><div class="k">Superficie</div><div class="v" id="gpsArea">0,00 ha</div></div>
+          <div><div class="k">Périmètre</div><div class="v" id="gpsPerim">0 m</div></div>
+        </div>
+        <div id="eudrBox" class="eudr-box na"><i class="fa-solid fa-circle-info"></i><span>Ajoutez au moins 4 points GPS pour fermer le polygone.</span></div>
+        <div id="ptList" class="pt-list hidden"></div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-ghost" id="gpsUndoBtn" type="button"><i class="fa-solid fa-rotate-left"></i> Annuler dernier point</button>
+          <button class="btn btn-ghost" id="gpsClearBtn" type="button"><i class="fa-solid fa-eraser"></i> Effacer</button>
+          <button class="btn btn-ghost" id="gpsAutoBtn" type="button"><i class="fa-solid fa-person-walking"></i> Simuler le tour complet</button>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-green btn-lg" id="gpsSaveBtn" type="button" disabled><i class="fa-solid fa-check-double"></i> Fermer et valider le polygone</button></div>
+      </div>
+    </div>
+
+    <!-- 1c. Pesée / collecte -->
+    <div id="pane-harvest" class="agent-pane">
+      <form id="harvestForm" class="card" novalidate>
+        <div class="card-head"><h3><i class="fa-solid fa-scale-balanced"></i> Enregistrer une récolte et pesée</h3><span class="badge b-blue" id="nextHarvId">COL-2026-0019</span></div>
+        <div class="form-grid cols-2">
+          <div class="full">
+            <label class="lbl" for="hProducer">Producteur *</label>
+            <select class="input" id="hProducer"></select>
+            <div class="hint" id="hProducerHint"></div>
+          </div>
+          <div>
+            <label class="lbl" for="hFiliere">Filière</label>
+            <select class="input" id="hFiliere"></select>
+          </div>
+          <div>
+            <label class="lbl" for="hWeight">Poids net (kg) *</label>
+            <input class="input" id="hWeight" type="number" inputmode="decimal" min="0.1" step="0.1" placeholder="ex : 250">
+          </div>
+          <div class="full">
+            <span class="lbl">Grade / Qualité *</span>
+            <div class="seg" style="grid-template-columns:repeat(3,1fr)">
+              <input type="radio" name="grade" id="gA" value="A" checked><label for="gA">Grade A</label>
+              <input type="radio" name="grade" id="gB" value="B"><label for="gB">Grade B</label>
+              <input type="radio" name="grade" id="gC" value="C"><label for="gC">Grade C</label>
+            </div>
+          </div>
+          <div>
+            <label class="lbl" for="hPrice">Prix unitaire du jour ($/kg) *</label>
+            <input class="input" id="hPrice" type="number" inputmode="decimal" min="0.01" step="0.01">
+            <div class="hint" id="hPriceHint"></div>
+          </div>
+          <div>
+            <label class="lbl" for="hOperator">Paiement prévu via</label>
+            <select class="input" id="hOperator"></select>
+          </div>
+          <div class="full total-box">
+            <div><div class="k">Total à payer (USD)</div><div class="v" id="hTotalUsd">$0.00</div></div>
+            <div><div class="k">Équivalent (CDF)</div><div class="v" id="hTotalCdf">0 FC</div></div>
+          </div>
+        </div>
+        <div id="harvestErr" class="err"></div>
+        <div style="margin-top:16px"><button class="btn btn-primary btn-lg" type="submit"><i class="fa-solid fa-check"></i> Valider la pesée et notifier le producteur</button></div>
+      </form>
+    </div>
+
+    <!-- 1d. Liste producteurs -->
+    <div id="pane-list" class="agent-pane">
+      <div class="card">
+        <div class="card-head"><h3><i class="fa-solid fa-users"></i> Producteurs enregistrés</h3><span class="badge b-blue" id="prodCountBadge">0</span></div>
+        <input class="input" id="prodSearch" placeholder="Rechercher par nom, ID, village, téléphone" style="margin-bottom:12px">
+        <div id="prodList" class="plist"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     MODULE 2 : COOPÉRATIVE (gestion, paiements, logistique)
+     ====================================================================== -->
+<section id="view-coop" class="view">
+  <div class="view-head">
+    <div><h2>Tableau de bord Coopérative</h2><p>Synchronisation, registre des collectes, paiements Mobile Money et groupage logistique.</p></div>
+  </div>
+  <div class="kpis four" id="coopKpis"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-arrows-rotate"></i> File de synchronisation</h3>
+      <div class="btn-row">
+        <span id="lastSync" class="small muted" style="align-self:center"></span>
+        <button class="btn btn-primary" id="syncBtn"><i class="fa-solid fa-cloud-arrow-up"></i> Synchroniser maintenant</button>
+      </div>
+    </div>
+    <div id="queueBox"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-book"></i> Registre des collectes et paiements</h3>
+      <div class="btn-row">
+        <button class="btn btn-green btn-sm" id="payAllBtn"><i class="fa-solid fa-money-bill-transfer"></i> Payer toutes les collectes filtrées en attente</button>
+      </div>
+    </div>
+    <div class="filters">
+      <input class="input" id="fSearch" placeholder="Producteur, ID collecte, réf. transaction">
+      <select class="input" id="fTerritoire"></select>
+      <select class="input" id="fFiliere"></select>
+      <select class="input" id="fStatus">
+        <option value="">Tous statuts</option>
+        <option value="pending">En attente de paiement</option>
+        <option value="paid">Payé</option>
+      </select>
+      <button class="btn btn-ghost" id="fReset" type="button"><i class="fa-solid fa-filter-circle-xmark"></i> Réinitialiser</button>
+    </div>
+    <div class="table-wrap"><table class="tbl" id="regTable"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-truck"></i> Agrégation logistique : stock à enlever par axe et village</h3>
+      <span class="small muted">Capacité camion de référence : <b id="truckCap">5</b> t</span>
+    </div>
+    <div class="table-wrap"><table class="tbl" id="logTable"></table></div>
+    <h4 style="margin:18px 0 10px;font-size:.95rem;color:var(--blue-ink)">Lots expédiés (traçabilité lot vers producteurs)</h4>
+    <div class="table-wrap"><table class="tbl" id="lotTable"></table></div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     MODULE 3 : BAILLEURS (impact, carte, graphiques, exports)
+     ====================================================================== -->
+<section id="view-donor" class="view">
+  <div class="print-only" style="margin-bottom:12px">
+    <h2 style="color:#005A8D">Rapport d'impact et de traçabilité</h2>
+    <p id="printMeta"></p>
+  </div>
+  <div class="view-head">
+    <div><h2>Impact et traçabilité</h2><p>Indicateurs en temps réel pour les bailleurs (UE, Enabel, USAID, FIDA, Banque Mondiale) et exports d'audit EUDR.</p></div>
+    <div class="btn-row no-print">
+      <button class="btn btn-green" id="exportGeoBtn"><i class="fa-solid fa-earth-africa"></i> Exporter GeoJSON (Audit EUDR)</button>
+      <button class="btn btn-primary" id="exportCsvBtn"><i class="fa-solid fa-file-csv"></i> Exporter Rapport CSV</button>
+      <button class="btn btn-ghost" id="exportProdCsvBtn"><i class="fa-solid fa-users"></i> CSV producteurs</button>
+      <button class="btn btn-ghost" id="printBtn"><i class="fa-solid fa-file-pdf"></i> Rapport PDF</button>
+    </div>
+  </div>
+  <div class="kpis six" id="donorKpis"></div>
+
+  <div class="card">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-map-location-dot"></i> Carte des parcelles tracées (Est de la RDC)</h3>
+      <span class="small muted no-print">Cliquez sur une parcelle pour la fiche de traçabilité</span>
+    </div>
+    <div id="donorMap" class="map tall"></div>
+    <p class="hint">Les aires protégées affichées (PN Virunga, PN Kahuzi-Biega) sont des contours simplifiés à but indicatif. Pour un audit EUDR réel, croiser avec les couches officielles WDPA et la carte forestière JRC GFC 2020.</p>
+  </div>
+
+  <div class="grid-3">
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-head"><h3><i class="fa-solid fa-chart-column"></i> Volumes collectés par village et par filière (tonnes)</h3></div>
+      <div class="chart-box"><canvas id="chartVolumes"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-venus-mars"></i> Parité et inclusion financière</h3></div>
+      <div class="chart-box" style="height:240px"><canvas id="chartGender"></canvas></div>
+      <div id="genderNote" class="small" style="margin-top:10px"></div>
+    </div>
+    <div class="card" style="grid-column:span 2">
+      <div class="card-head"><h3><i class="fa-solid fa-chart-line"></i> Revenus versés aux producteurs via Mobile Money (USD / mois)</h3></div>
+      <div class="chart-box"><canvas id="chartRevenue"></canvas></div>
+    </div>
+  </div>
+  <p class="footer-note">KivuTrace &amp; Market, MVP de démonstration. Données stockées localement sur l'appareil. Serveur central et API Mobile Money simulés.</p>
+</section>
+</main>
+
+<div id="modalRoot"></div>
+<div class="toasts" id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+/* ==========================================================================
+   KivuTrace & Market : MVP offline-first
+   Organisation du script (un seul fichier, modules sous forme d'objets) :
+     CONFIG    : référentiels (villages, filières, aires protégées, opérateurs)
+     Util      : formatage, échappement HTML, dates, téléchargement
+     Geo       : surface géodésique, périmètre, point-dans-polygone, contrôle EUDR
+     Store     : persistance localStorage + file de synchronisation
+     Seed      : jeu de données de démonstration (8 producteurs, 18 collectes)
+     Net       : état réseau réel + simulateur hors ligne, synchronisation
+     SMS       : génération des SMS en swahili + simulateur de téléphone
+     UI        : modales, toasts, navigation
+     Agent     : enregistrement producteur, cartographie GPS, pesée
+     Coop      : file de sync, registre, paiements Mobile Money, logistique
+     Donor     : KPI, carte globale, graphiques, exports
+   ========================================================================== */
+'use strict';
+
+/* ------------------------------------------------------------------------
+   CONFIG : référentiels
+   ------------------------------------------------------------------------ */
+const CONFIG = {
+  storeKey: 'kivutrace.mvp.v1',
+  truckCapacityT: 5,
+  // Villages / groupements avec coordonnées approximatives et axe routier de ramassage
+  villages: [
+    { name:'Minova',        territoire:'Kalehe',   province:'Sud-Kivu',  lat:-1.705, lng:29.030, axe:'Axe Minova-Kalehe-Bukavu (RN2)' },
+    { name:'Ihusi',         territoire:'Kalehe',   province:'Sud-Kivu',  lat:-2.035, lng:28.930, axe:'Axe Minova-Kalehe-Bukavu (RN2)' },
+    { name:'Kalehe-Centre', territoire:'Kalehe',   province:'Sud-Kivu',  lat:-2.106, lng:28.900, axe:'Axe Minova-Kalehe-Bukavu (RN2)' },
+    { name:'Sake',          territoire:'Masisi',   province:'Nord-Kivu', lat:-1.573, lng:29.045, axe:'Axe Goma-Sake-Masisi' },
+    { name:'Kibabi',        territoire:'Masisi',   province:'Nord-Kivu', lat:-1.500, lng:28.925, axe:'Axe Goma-Sake-Masisi' },
+    { name:'Masisi-Centre', territoire:'Masisi',   province:'Nord-Kivu', lat:-1.400, lng:28.815, axe:'Axe Goma-Sake-Masisi' },
+    { name:'Kiwanja',       territoire:'Rutshuru', province:'Nord-Kivu', lat:-1.165, lng:29.455, axe:'Axe Goma-Rutshuru (RN2)' },
+    { name:'Rubare',        territoire:'Rutshuru', province:'Nord-Kivu', lat:-1.235, lng:29.430, axe:'Axe Goma-Rutshuru (RN2)' },
+    { name:'Rwanguba',      territoire:'Rutshuru', province:'Nord-Kivu', lat:-1.255, lng:29.480, axe:'Axe Goma-Rutshuru (RN2)' },
+    { name:'Oicha',         territoire:'Beni',     province:'Nord-Kivu', lat:0.700,  lng:29.520, axe:'Axe Beni-Oicha-Eringeti (RN4)' },
+    { name:'Mbau',          territoire:'Beni',     province:'Nord-Kivu', lat:0.610,  lng:29.540, axe:'Axe Beni-Oicha-Eringeti (RN4)' },
+    { name:'Mavivi',        territoire:'Beni',     province:'Nord-Kivu', lat:0.560,  lng:29.470, axe:'Axe Beni-Oicha-Eringeti (RN4)' }
+  ],
+  // Filières : prix de référence Grade A ($/kg), traduction swahili, code SH et périmètre EUDR
+  filieres: {
+    'Café Arabica':   { sw:'Kahawa Arabica', price:3.80, hs:'0901', eudr:true,  color:'#005A8D' },
+    'Cacao':          { sw:'Kakao',          price:3.20, hs:'1801', eudr:true,  color:'#2D6A4F' },
+    'Haricot':        { sw:'Maharagwe',      price:0.90, hs:'0713', eudr:false, color:'#8E5572' },
+    'Pomme de terre': { sw:'Viazi',          price:0.30, hs:'0701', eudr:false, color:'#D9A21B' },
+    'Maïs':           { sw:'Mahindi',        price:0.35, hs:'1005', eudr:false, color:'#7FA7C9' }
+  },
+  gradeFactor: { A:1, B:0.9, C:0.75 },
+  // Opérateurs Mobile Money RDC et préfixes de numéros (après +243)
+  operators: {
+    MPESA:  { label:'M-Pesa (Vodacom)',   short:'M-Pesa',       prefix:'MP', nums:['81','82','83'] },
+    AIRTEL: { label:'Airtel Money',       short:'Airtel Money', prefix:'AM', nums:['97','98','99'] },
+    ORANGE: { label:'Orange Money',       short:'Orange Money', prefix:'OM', nums:['84','85','89','80'] }
+  },
+  // Aires protégées : contours SIMPLIFIÉS à visée de démonstration (pas des limites légales)
+  protectedAreas: [
+    { name:'Parc National des Virunga (secteur Sud)', coords:[[-1.66,29.18],[-1.62,29.33],[-1.50,29.52],[-1.40,29.60],[-1.33,29.47],[-1.38,29.30],[-1.50,29.18]] },
+    { name:'Parc National des Virunga (secteur Centre)', coords:[[-1.05,29.05],[-1.00,29.35],[-0.80,29.60],[-0.45,29.72],[-0.30,29.50],[-0.55,29.15],[-0.85,29.02]] },
+    { name:'Parc National des Virunga (secteur Nord, Rwenzori)', coords:[[0.25,29.78],[0.30,29.95],[0.50,30.00],[0.60,29.90],[0.45,29.75]] },
+    { name:'Parc National de Kahuzi-Biega (haute altitude)', coords:[[-2.45,28.62],[-2.42,28.80],[-2.25,28.83],[-2.10,28.76],[-2.07,28.62],[-2.25,28.55]] }
+  ]
+};
+const EUDR_SCOPE = Object.keys(CONFIG.filieres).filter(f => CONFIG.filieres[f].eudr);
+
+/* ------------------------------------------------------------------------
+   Util
+   ------------------------------------------------------------------------ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const Util = {
+  esc(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+  round2(n){ return Math.round((Number(n)+Number.EPSILON)*100)/100; },
+  usd(n){ return '$' + Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); },
+  usd0(n){ return '$' + Math.round(Number(n||0)).toLocaleString('en-US'); },
+  cdf(n){ return Math.round(Number(n||0)).toLocaleString('fr-FR').replace(/ | /g,' ') + ' FC'; },
+  num(n, d=0){ return Number(n||0).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}).replace(/ | /g,' '); },
+  kg(n){ return Util.num(n, n % 1 ? 1 : 0) + ' kg'; },
+  date(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); },
+  dateTime(iso){ if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); },
+  pad(n, w){ return String(n).padStart(w,'0'); },
+  uid(p){ return p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); },
+  year(){ return new Date().getFullYear(); },
+  initials(name){ return name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); },
+  // Normalise un numéro RDC vers +243XXXXXXXXX. Retourne null si invalide.
+  normPhone(raw){
+    let s = String(raw||'').replace(/[\s\-().]/g,'');
+    if(s.startsWith('00243')) s = '+' + s.slice(2);
+    if(/^0\d{9}$/.test(s)) s = '+243' + s.slice(1);
+    if(/^243\d{9}$/.test(s)) s = '+' + s;
+    return /^\+243[89]\d{8}$/.test(s) ? s : null;
+  },
+  fmtPhone(p){ return p ? p.replace(/^\+243(\d{3})(\d{3})(\d{3})$/, '+243 $1 $2 $3') : ''; },
+  operatorFor(phone){
+    const two = (phone||'').slice(4,6);
+    for(const [k,o] of Object.entries(CONFIG.operators)) if(o.nums.includes(two)) return k;
+    return 'MPESA';
+  },
+  // Référence transaction au format opérateur, ex : MP261115.8942
+  txRef(op, date=new Date()){
+    const d = new Date(date);
+    return CONFIG.operators[op].prefix + String(d.getFullYear()).slice(2) + Util.pad(d.getMonth()+1,2) + Util.pad(d.getDate(),2) + '.' + Util.pad(Math.floor(Math.random()*10000),4);
+  },
+  download(filename, content, mime){
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  },
+  stamp(){ const d=new Date(); return d.getFullYear()+Util.pad(d.getMonth()+1,2)+Util.pad(d.getDate(),2)+'-'+Util.pad(d.getHours(),2)+Util.pad(d.getMinutes(),2); },
+  sleep(ms){ return new Promise(r => setTimeout(r, ms)); },
+  village(name){ return CONFIG.villages.find(v => v.name === name) || CONFIG.villages[0]; }
+};
+
+/* ------------------------------------------------------------------------
+   Geo : calculs géodésiques (coordonnées [lat, lng] en degrés WGS84)
+   ------------------------------------------------------------------------ */
+const Geo = {
+  R: 6378137,
+  rad: d => d * Math.PI / 180,
+  // Aire sphérique d'un polygone (même formule que Leaflet.draw / Google), en hectares
+  areaHa(coords){
+    if(!coords || coords.length < 3) return 0;
+    let a = 0;
+    for(let i=0;i<coords.length;i++){
+      const p1 = coords[i], p2 = coords[(i+1) % coords.length];
+      a += Geo.rad(p2[1]-p1[1]) * (2 + Math.sin(Geo.rad(p1[0])) + Math.sin(Geo.rad(p2[0])));
+    }
+    return Math.abs(a * Geo.R * Geo.R / 2) / 10000;
+  },
+  dist(a, b){ // haversine, mètres
+    const dLat = Geo.rad(b[0]-a[0]), dLng = Geo.rad(b[1]-a[1]);
+    const h = Math.sin(dLat/2)**2 + Math.cos(Geo.rad(a[0]))*Math.cos(Geo.rad(b[0]))*Math.sin(dLng/2)**2;
+    return 2 * Geo.R * Math.asin(Math.sqrt(h));
+  },
+  perimeter(coords, closed=true){
+    if(!coords || coords.length < 2) return 0;
+    let p = 0;
+    for(let i=0;i<coords.length-1;i++) p += Geo.dist(coords[i], coords[i+1]);
+    if(closed && coords.length > 2) p += Geo.dist(coords[coords.length-1], coords[0]);
+    return p;
+  },
+  centroid(coords){
+    const n = coords.length;
+    return [coords.reduce((s,c)=>s+c[0],0)/n, coords.reduce((s,c)=>s+c[1],0)/n];
+  },
+  pointInPolygon(pt, poly){ // ray casting
+    let inside = false;
+    for(let i=0, j=poly.length-1; i<poly.length; j=i++){
+      const [yi, xi] = poly[i], [yj, xj] = poly[j];
+      if(((yi > pt[0]) !== (yj > pt[0])) && (pt[1] < (xj-xi)*(pt[0]-yi)/(yj-yi) + xi)) inside = !inside;
+    }
+    return inside;
+  },
+  // Détecte un polygone auto-sécant (GeoJSON invalide pour un audit)
+  selfIntersects(c){
+    const n = c.length; if(n < 4) return false;
+    const ccw = (A,B,C) => (C[0]-A[0])*(B[1]-A[1]) > (B[0]-A[0])*(C[1]-A[1]);
+    const inter = (A,B,C,D) => ccw(A,C,D) !== ccw(B,C,D) && ccw(A,B,C) !== ccw(A,B,D);
+    for(let i=0;i<n;i++){
+      for(let j=i+1;j<n;j++){
+        if(Math.abs(i-j) <= 1 || (i===0 && j===n-1)) continue;
+        if(inter(c[i], c[(i+1)%n], c[j], c[(j+1)%n])) return true;
+      }
+    }
+    return false;
+  },
+  // Pré-contrôle EUDR : chevauchement avec une aire protégée (tous sommets + centroïde)
+  eudrCheck(coords){
+    const test = coords.concat([Geo.centroid(coords)]);
+    for(const pa of CONFIG.protectedAreas){
+      if(test.some(p => Geo.pointInPolygon(p, pa.coords)) || pa.coords.some(p => Geo.pointInPolygon(p, coords))){
+        return { status:'non_conforme', area: pa.name, checkedAt: new Date().toISOString() };
+      }
+    }
+    return { status:'conforme', area:null, checkedAt: new Date().toISOString() };
+  },
+  // Génère un polygone réaliste (largeur x hauteur en mètres) autour d'un centre
+  makePlot(lat, lng, wM, hM, shape){
+    const shapes = [
+      [[0,0],[0.1,1],[0.95,1.1],[1.05,0.35],[0.7,-0.05]],
+      [[0,0],[-0.05,0.9],[0.6,1.05],[1,0.7],[0.95,0.05]],
+      [[0,0],[0.15,1],[1,0.9],[0.9,0.2]],
+      [[0,0],[0,0.75],[0.4,1],[1,0.95],[1.1,0.4],[0.6,-0.05]]
+    ];
+    const mLat = 111320, mLng = 111320 * Math.cos(Geo.rad(lat));
+    return shapes[shape % shapes.length].map(([x,y]) => [
+      +(lat + (y-0.5)*hM/mLat).toFixed(6),
+      +(lng + (x-0.5)*wM/mLng).toFixed(6)
+    ]);
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Store : persistance locale (localStorage) + file de synchronisation
+   ------------------------------------------------------------------------ */
+const Store = {
+  data: null,
+  memoryOnly: false,
+  load(){
+    try{
+      const raw = localStorage.getItem(CONFIG.storeKey);
+      if(raw) this.data = JSON.parse(raw);
+    }catch(e){ this.memoryOnly = true; }
+    if(!this.data || this.data.version !== 1) { this.data = Seed.build(); this.save(); }
+  },
+  save(){
+    if(this.memoryOnly) return;
+    try{ localStorage.setItem(CONFIG.storeKey, JSON.stringify(this.data)); }
+    catch(e){ this.memoryOnly = true; UI.toast('Stockage local indisponible : les données restent en mémoire pour cette session.', 'warn'); }
+  },
+  get s(){ return this.data.settings; },
+  producer(id){ return this.data.producers.find(p => p.id === id); },
+  harvestsOf(id){ return this.data.harvests.filter(h => h.producerId === id); },
+  nextProducerId(){ return 'KIV-' + Util.year() + '-' + Util.pad(this.data.seq.producer + 1, 3); },
+  nextHarvestId(){ return 'COL-' + Util.year() + '-' + Util.pad(this.data.seq.harvest + 1, 4); },
+  nextLotId(){ return 'LOT-' + Util.year() + '-' + Util.pad(this.data.seq.lot + 1, 3); },
+  // Toute écriture passe par enqueue : l'opération est stockée localement puis synchronisée
+  enqueue(type, ref, label){
+    this.data.queue.push({ id: Util.uid('OP'), type, ref, label, ts: new Date().toISOString() });
+    this.save();
+    App.refreshBadges();
+    if(Net.online && this.s.autoSync) Net.scheduleAutoSync();
+  },
+  price(filiere, grade){
+    const base = (this.s.prices && this.s.prices[filiere]) ?? CONFIG.filieres[filiere].price;
+    return Util.round2(base * CONFIG.gradeFactor[grade]);
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Seed : données de démonstration cohérentes (Kalehe, Masisi, Rutshuru, Beni)
+   ------------------------------------------------------------------------ */
+const Seed = {
+  build(){
+    const y = 2026;
+    const producers = [
+      // [nom, sexe, téléphone, village, filière, n° électeur, plot w, plot h, shape, dLat, dLng, date inscription]
+      ['Furaha Mapendo',       'F','+243812345671','Minova',  'Café Arabica',   '1104228710', 140,110,0, 0.008, 0.004, '2026-03-04'],
+      ['Jean-Baptiste Bahati', 'M','+243997214558','Ihusi',   'Café Arabica',   '1104331592', 180,150,1, 0.004,-0.012, '2026-03-04'],
+      ['Neema Kahindo',        'F','+243823661904','Sake',    'Pomme de terre', '0907812245', 160,120,2, 0.012, 0.002, '2026-03-11'],
+      ['Emmanuel Ntambuka',    'M','+243851409127','Kibabi',  'Pomme de terre', '0907655018', 210,170,3, 0.005, 0.006, '2026-03-11'],
+      ['Esther Kavira',        'F','+243970558312','Kiwanja', 'Café Arabica',   '0911407736', 130,100,1, 0.006,-0.007, '2026-03-19'],
+      ['Pascal Muhindo',       'M','+243815772046','Rubare',  'Pomme de terre', '0911520481', 170,140,0,-0.004,-0.006, '2026-03-19'],
+      ['Rachel Masika',        'F','+243894120683','Oicha',   'Cacao',          '0915203397', 220,160,3, 0.005,-0.010, '2026-04-02'],
+      ['Josué Kambale',        'M','+243998305419','Mbau',    'Cacao',          '0915288064', 190,150,2,-0.006,-0.012, '2026-04-02']
+    ].map((r,i) => {
+      const v = Util.village(r[3]);
+      const coords = Geo.makePlot(v.lat + r[9], v.lng + r[10], r[6], r[7], r[8]);
+      const created = r[11] + 'T08:30:00';
+      return {
+        id: 'KIV-' + y + '-' + Util.pad(i+1,3), name:r[0], sex:r[1], phone:r[2], village:r[3], filiere:r[4], voterId:r[5],
+        consent:true, createdAt: created, synced:true,
+        parcel: { coords, areaHa: Util.round2(Geo.areaHa(coords)), perimeterM: Math.round(Geo.perimeter(coords)), capturedAt: created, method:'gps', eudr: Object.assign(Geo.eudrCheck(coords), { checkedAt: created }) }
+      };
+    });
+    // [index producteur, date, kg, grade, payé ?, synchronisé ?]
+    const rows = [
+      [0,'2026-07-14',320,'A',true,true],[1,'2026-07-20',410,'B',true,true],[2,'2026-07-28',1450,'A',true,true],
+      [6,'2026-08-05',260,'A',true,true],[4,'2026-08-12',280,'A',true,true],[3,'2026-08-19',1800,'B',true,true],
+      [7,'2026-08-27',340,'B',true,true],[5,'2026-09-03',1200,'A',true,true],[0,'2026-09-15',275,'A',true,true],
+      [2,'2026-09-24',1600,'B',true,true],[6,'2026-10-02',310,'A',true,true],[1,'2026-10-09',380,'A',true,true],
+      [4,'2026-10-18',305,'B',true,true],[7,'2026-10-25',290,'A',false,true],[3,'2026-11-03',2100,'A',false,true],
+      [5,'2026-11-07',950,'C',false,true],[0,'2026-11-12',340,'A',false,false],[6,'2026-11-14',225,'B',false,false]
+    ];
+    const rate = 2850;
+    const harvests = rows.map((r,i) => {
+      const p = producers[r[0]];
+      const month = Number(r[1].slice(5,7));
+      const base = CONFIG.filieres[p.filiere].price * (1 + ((month % 3) - 1) * 0.03);
+      const price = Util.round2(base * CONFIG.gradeFactor[r[3]]);
+      const total = Util.round2(price * r[2]);
+      const op = Util.operatorFor(p.phone);
+      const h = {
+        id: 'COL-' + y + '-' + Util.pad(i+1,4), producerId:p.id, filiere:p.filiere, date: r[1] + 'T10:15:00',
+        weightKg:r[2], grade:r[3], priceUsd:price, totalUsd:total, totalCdf: Math.round(total*rate), rate,
+        operator:op, status: r[4] ? 'paid' : 'pending', txRef:null, paidAt:null, paidCurrency:null,
+        synced:r[5], lotId:null, agent:'Agent terrain démo'
+      };
+      if(r[4]){
+        const pd = new Date(r[1] + 'T14:00:00'); pd.setDate(pd.getDate()+2);
+        h.paidAt = pd.toISOString();
+        h.paidCurrency = 'USD';
+        h.txRef = CONFIG.operators[op].prefix + String(pd.getFullYear()).slice(2) + Util.pad(pd.getMonth()+1,2) + Util.pad(pd.getDate(),2) + '.' + Util.pad((i*7919+1361) % 10000, 4);
+      }
+      return h;
+    });
+    // Lots déjà expédiés : collectes 1 à 13 groupées par axe routier
+    const lots = []; const byAxe = {};
+    harvests.slice(0,13).forEach(h => { const ax = Util.village(producers.find(p=>p.id===h.producerId).village).axe; (byAxe[ax] = byAxe[ax] || []).push(h); });
+    Object.entries(byAxe).forEach(([axe, hs], i) => {
+      const id = 'LOT-' + y + '-' + Util.pad(i+1,3);
+      hs.forEach(h => h.lotId = id);
+      lots.push({ id, axe, date:'2026-10-' + Util.pad(20+i,2) + 'T07:00:00', harvestIds: hs.map(h=>h.id), weightKg: hs.reduce((s,h)=>s+h.weightKg,0), truck:'Camion ' + ['KV-4521','KV-8810','NK-3307','NK-1904'][i] });
+    });
+    const queue = harvests.filter(h => !h.synced).map(h => ({
+      id: Util.uid('OP'), type:'HARVEST_CREATE', ref:h.id,
+      label: 'Pesée ' + h.id + ' : ' + Util.kg(h.weightKg) + ' ' + h.filiere + ' (' + producers.find(p=>p.id===h.producerId).name + ')', ts: h.date
+    }));
+    const sms = harvests.slice(-4).map(h => {
+      const p = producers.find(x=>x.id===h.producerId);
+      return { id:Util.uid('SMS'), to:p.phone, name:p.name, text:SMS.harvestText(p, h), ts:h.date, read:true };
+    });
+    return {
+      version:1,
+      settings:{ coop:'Coopérative KivuTrace', agent:'Agent terrain démo', rate, autoSync:true, prices:Object.fromEntries(Object.entries(CONFIG.filieres).map(([k,v])=>[k,v.price])) },
+      producers, harvests, lots, queue, sms, syncLog:[],
+      lastSync:'2026-11-10T17:42:00', seq:{ producer:producers.length, harvest:harvests.length, lot:lots.length }
+    };
+  }
+};
+
+/* ------------------------------------------------------------------------
+   SMS : messages en swahili + simulateur de téléphone du producteur
+   ------------------------------------------------------------------------ */
+const SMS = {
+  firstName(name){ return name.split(/\s+/)[0]; },
+  harvestText(p, h){
+    const op = CONFIG.operators[h.operator || Util.operatorFor(p.phone)].short;
+    return 'Jambo ' + SMS.firstName(p.name) + ', Coopérative KivuTrace imepokea kg ' + Util.num(h.weightKg, h.weightKg % 1 ? 1 : 0) + ' ya ' + CONFIG.filieres[h.filiere].sw +
+      ' (Daraja ' + h.grade + '). Malipo yako ya ' + Util.usd(h.totalUsd) + ' itatumwa kwa ' + op + '. Kumb: ' + h.id + '. Asante.';
+  },
+  paymentText(p, h){
+    const op = CONFIG.operators[h.operator].short;
+    const amt = h.paidCurrency === 'CDF' ? Util.cdf(h.totalCdf) : Util.usd(h.totalUsd);
+    return 'Jambo ' + SMS.firstName(p.name) + ', umepokea ' + amt + ' kwa ' + op + ' kwa mavuno ' + h.id + '. Kumb ya muamala: ' + h.txRef + '. KivuTrace inakushukuru.';
+  },
+  send(p, text){
+    const m = { id:Util.uid('SMS'), to:p.phone, name:p.name, text, ts:new Date().toISOString(), read:false };
+    Store.data.sms.push(m);
+    if(Store.data.sms.length > 200) Store.data.sms.shift();
+    Store.save(); App.refreshBadges();
+    return m;
+  },
+  segments(text){ return Math.ceil(text.length / 160) || 1; },
+  bubble(m, isNew){
+    return '<div class="sms' + (isNew?' new':'') + '"><div class="to"><i class="fa-solid fa-user"></i> ' + Util.esc(m.name) + ' · ' + Util.esc(Util.fmtPhone(m.to)) + '</div>' +
+      Util.esc(m.text) + '<div class="t">' + Util.dateTime(m.ts) + ' · ' + m.text.length + ' car. / ' + SMS.segments(m.text) + ' SMS</div></div>';
+  },
+  phoneHtml(list, title, newId){
+    return '<div class="phone"><div class="phone-notch"></div><div class="phone-screen"><div class="phone-bar"><i class="fa-solid fa-tower-cell"></i><div>' + Util.esc(title) +
+      '<small>Expéditeur : KIVUTRACE</small></div></div>' + (list.length ? list.map(m => SMS.bubble(m, m.id===newId)).join('') : '<div class="empty">Aucun SMS</div>') + '</div></div>';
+  },
+  // Popup déclenchée après une pesée ou un paiement
+  preview(m, subtitle){
+    UI.modal({
+      title:'Aperçu SMS envoyé au producteur (swahili)',
+      body: '<p class="small muted" style="margin-top:0">' + Util.esc(subtitle) + '</p>' + SMS.phoneHtml([m], m.name, m.id),
+      actions:[{ label:'Voir tous les SMS', cls:'btn-ghost', onClick:()=>{ UI.closeModal(); SMS.inbox(); } }, { label:'OK', cls:'btn-primary', onClick:UI.closeModal }]
+    });
+    m.read = true; Store.save(); App.refreshBadges();
+  },
+  inbox(){
+    const list = Store.data.sms.slice().reverse();
+    const newest = list.find(m => !m.read);
+    UI.modal({
+      title:'Simulateur SMS paysan',
+      body:'<p class="small muted" style="margin-top:0">Messages envoyés aux producteurs (passerelle SMS simulée). Le plus récent en haut.</p>' + SMS.phoneHtml(list, 'Boîte d\'envoi', newest && newest.id),
+      actions:[{ label:'Fermer', cls:'btn-primary', onClick:UI.closeModal }]
+    });
+    Store.data.sms.forEach(m => m.read = true); Store.save(); App.refreshBadges();
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Net : état réseau réel (navigator.onLine) combiné au simulateur
+   ------------------------------------------------------------------------ */
+const Net = {
+  simOffline: false,
+  syncing: false,
+  _timer: null,
+  get online(){ return navigator.onLine && !this.simOffline; },
+  init(){
+    $('#netPill').addEventListener('click', () => {
+      if(!navigator.onLine){ UI.toast('L\'appareil est réellement hors ligne. Le simulateur ne peut pas forcer le mode en ligne.', 'warn'); return; }
+      this.simOffline = !this.simOffline;
+      this.render();
+      UI.toast(this.simOffline ? 'Mode hors ligne simulé. Les saisies restent sur l\'appareil.' : 'Connexion rétablie.', this.simOffline ? 'warn' : 'success');
+      if(this.online) this.scheduleAutoSync();
+    });
+    window.addEventListener('online', () => { this.render(); this.scheduleAutoSync(); });
+    window.addEventListener('offline', () => this.render());
+    this.render();
+  },
+  render(){
+    const on = this.online;
+    const pill = $('#netPill');
+    pill.className = 'net-pill ' + (on ? 'on' : 'off');
+    $('#netLabel').textContent = on ? 'En ligne' : 'Hors ligne';
+    $('#offlineBanner').classList.toggle('hidden', on);
+    const sb = $('#syncBtn'); if(sb) sb.disabled = !on || this.syncing || !Store.data.queue.length;
+    if(Coop.ready) Coop.renderQueue();
+  },
+  scheduleAutoSync(){
+    if(!Store.s.autoSync || !this.online || !Store.data.queue.length) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.sync(true), 1500);
+  },
+  // Envoi simulé vers le serveur central : marque les enregistrements comme synchronisés
+  async sync(auto=false){
+    if(this.syncing) return;
+    if(!this.online){ if(!auto) UI.toast('Synchronisation impossible : appareil hors ligne.', 'error'); return; }
+    const ops = Store.data.queue.slice();
+    if(!ops.length){ if(!auto) UI.toast('Rien à synchroniser.', 'success'); return; }
+    this.syncing = true; this.render();
+    const btn = $('#syncBtn'); const old = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi de ' + ops.length + ' opération(s)...';
+    await Util.sleep(1200);
+    if(!this.online){ // coupure pendant l'envoi : rien n'est perdu
+      this.syncing = false; btn.innerHTML = old; this.render();
+      UI.toast('Connexion perdue pendant l\'envoi. Les opérations restent en file.', 'error'); return;
+    }
+    const now = new Date().toISOString();
+    ops.forEach(op => {
+      if(op.type === 'PRODUCER_CREATE' || op.type === 'PARCEL_UPDATE'){ const p = Store.producer(op.ref); if(p) p.synced = true; }
+      if(op.type === 'HARVEST_CREATE' || op.type === 'PAYMENT'){ const h = Store.data.harvests.find(x => x.id === op.ref); if(h) h.synced = true; }
+      Store.data.syncLog.unshift(Object.assign({}, op, { syncedAt: now }));
+    });
+    const ids = new Set(ops.map(o => o.id));
+    Store.data.queue = Store.data.queue.filter(o => !ids.has(o.id));
+    Store.data.syncLog = Store.data.syncLog.slice(0, 40);
+    Store.data.lastSync = now;
+    Store.save();
+    this.syncing = false; btn.innerHTML = old;
+    App.refreshAll();
+    UI.toast(ops.length + ' opération(s) synchronisée(s) avec le serveur central' + (auto ? ' (auto)' : '') + '.', 'success');
+  }
+};
+
+/* ------------------------------------------------------------------------
+   UI : modales, toasts, navigation
+   ------------------------------------------------------------------------ */
+const UI = {
+  toast(msg, type=''){
+    const icons = { success:'fa-circle-check', error:'fa-triangle-exclamation', warn:'fa-plug-circle-xmark', '':'fa-circle-info' };
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.innerHTML = '<i class="fa-solid ' + (icons[type]||icons['']) + '" style="margin-top:3px"></i><span>' + Util.esc(msg) + '</span>';
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4200);
+  },
+  modal({ title, body, actions=[], wide=false, onClose=null }){
+    UI._onClose = onClose;
+    const root = $('#modalRoot');
+    root.innerHTML = '<div class="modal-bg"><div class="modal' + (wide?' wide':'') + '" role="dialog" aria-modal="true"><div class="modal-head"><h3>' + Util.esc(title) +
+      '</h3><button class="close-x" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button></div><div class="modal-body">' + body + '</div>' +
+      (actions.length ? '<div class="modal-foot"></div>' : '') + '</div></div>';
+    const foot = $('.modal-foot', root);
+    actions.forEach(a => {
+      const b = document.createElement('button');
+      b.className = 'btn ' + (a.cls || 'btn-ghost'); b.innerHTML = a.label;
+      if(a.id) b.id = a.id;
+      b.addEventListener('click', a.onClick);
+      foot.appendChild(b);
+    });
+    $('.close-x', root).addEventListener('click', UI.closeModal);
+    $('.modal-bg', root).addEventListener('click', e => { if(e.target.classList.contains('modal-bg')) UI.closeModal(); });
+    return root;
+  },
+  closeModal(){
+    $('#modalRoot').innerHTML = '';
+    const cb = UI._onClose; UI._onClose = null;
+    if(cb) cb();
+  },
+  confirm(title, html, okLabel, onOk, okCls='btn-primary'){
+    UI.modal({ title, body:html, actions:[{ label:'Annuler', cls:'btn-ghost', onClick:UI.closeModal }, { label:okLabel, cls:okCls, onClick:onOk }] });
+  },
+  avatarColor(sex){ return sex === 'F' ? '#2D6A4F' : '#0077B6'; },
+  statusBadge(h){
+    return h.status === 'paid' ? '<span class="badge b-green"><i class="fa-solid fa-check"></i> Payé</span>' : '<span class="badge b-gold"><i class="fa-regular fa-clock"></i> En attente</span>';
+  },
+  syncBadge(synced){
+    return synced ? '<span class="badge b-blue" title="Synchronisé"><i class="fa-solid fa-cloud"></i> Sync</span>' : '<span class="badge b-amber" title="En file de synchronisation"><i class="fa-solid fa-mobile-screen"></i> Local</span>';
+  },
+  eudrBadge(p){
+    if(!p.parcel) return '<span class="badge b-grey"><i class="fa-solid fa-map"></i> Parcelle à cartographier</span>';
+    if(p.parcel.eudr.status === 'non_conforme') return '<span class="badge b-red"><i class="fa-solid fa-ban"></i> Non conforme EUDR</span>';
+    return '<span class="badge b-green"><i class="fa-solid fa-leaf"></i> Conforme EUDR</span>';
+  },
+  // Rendu d'un QR code (qrcode.js) avec repli texte si la librairie n'est pas chargée
+  qr(el, text, size=128){
+    el.innerHTML = '';
+    if(typeof QRCode === 'undefined'){ el.innerHTML = '<div class="small muted" style="width:'+size+'px;text-align:center">QR indisponible hors ligne<br><b class="mono">' + Util.esc(text.split('|')[1] || '') + '</b></div>'; return; }
+    try{ new QRCode(el, { text, width:size, height:size, colorDark:'#023E62', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M }); }
+    catch(e){ el.innerHTML = '<b class="mono">' + Util.esc(text.split('|')[1] || text) + '</b>'; }
+  },
+  // Fiche de traçabilité complète d'un producteur
+  producerSheet(id){
+    const p = Store.producer(id); if(!p) return;
+    const v = Util.village(p.village);
+    const hs = Store.harvestsOf(id).sort((a,b) => b.date.localeCompare(a.date));
+    const totKg = hs.reduce((s,h)=>s+h.weightKg,0);
+    const paid = hs.filter(h=>h.status==='paid').reduce((s,h)=>s+h.totalUsd,0);
+    const inScope = EUDR_SCOPE.includes(p.filiere);
+    const parcel = p.parcel ? '<dl class="kv"><dt>Superficie</dt><dd>' + Util.num(p.parcel.areaHa,2) + ' ha</dd><dt>Périmètre</dt><dd>' + Util.num(p.parcel.perimeterM) + ' m</dd><dt>Sommets GPS</dt><dd>' + p.parcel.coords.length +
+      '</dd><dt>Centroïde</dt><dd class="mono">' + Geo.centroid(p.parcel.coords).map(c=>c.toFixed(6)).join(', ') + '</dd><dt>Statut</dt><dd>' + UI.eudrBadge(p) +
+      (p.parcel.eudr.area ? '<div class="small" style="color:var(--red)">Chevauche : ' + Util.esc(p.parcel.eudr.area) + '</div>' : '') + '</dd><dt>Périmètre EUDR</dt><dd>' +
+      (inScope ? 'Oui (SH ' + CONFIG.filieres[p.filiere].hs + ')' : 'Non, filière hors règlement (traçabilité interne)') + '</dd></dl>' : '<p class="muted">Aucune parcelle cartographiée.</p>';
+    const rows = hs.map(h => '<tr><td>' + Util.date(h.date) + '</td><td class="mono">' + h.id + '</td><td class="num">' + Util.kg(h.weightKg) + '</td><td>' + h.grade + '</td><td class="num">' + Util.usd(h.totalUsd) + '</td><td>' + UI.statusBadge(h) +
+      '</td><td class="mono small">' + (h.txRef || '') + '</td><td class="mono small">' + (h.lotId || '') + '</td></tr>').join('');
+    UI.modal({
+      title:'Fiche de traçabilité ' + p.id, wide:true,
+      body:
+        '<div class="grid-2"><div>' +
+          '<div class="idcard"><div class="idcard-head"><span>' + Util.esc(Store.s.coop) + '</span><span class="mono">' + p.id + '</span></div><div class="idcard-body"><dl>' +
+          '<dt>Nom</dt><dd>' + Util.esc(p.name) + '</dd><dt>Sexe</dt><dd>' + (p.sex==='F'?'Femme':'Homme') + '</dd><dt>Tél.</dt><dd>' + Util.esc(Util.fmtPhone(p.phone)) + '</dd><dt>Village</dt><dd>' + Util.esc(p.village) + '</dd><dt>Territoire</dt><dd>' + Util.esc(v.territoire + ', ' + v.province) +
+          '</dd><dt>Filière</dt><dd>' + Util.esc(p.filiere) + '</dd><dt>ID électeur</dt><dd class="mono">' + Util.esc(p.voterId) + '</dd></dl><div class="qr-box" id="sheetQr"></div></div></div>' +
+          '<div class="small muted" style="margin-top:8px;text-align:center">Inscrit le ' + Util.date(p.createdAt) + ' · ' + UI.syncBadge(p.synced) + '</div>' +
+        '</div><div><h4 style="margin-bottom:8px;color:var(--blue-ink)">Parcelle et conformité</h4>' + parcel + '</div></div>' +
+        '<h4 style="margin:18px 0 8px;color:var(--blue-ink)">Historique des livraisons (' + hs.length + ' collectes · ' + Util.kg(totKg) + ' · ' + Util.usd(paid) + ' versés)</h4>' +
+        (hs.length ? '<div class="table-wrap"><table class="tbl"><thead><tr><th>Date</th><th>Collecte</th><th class="num">Poids</th><th>Grade</th><th class="num">Montant</th><th>Statut</th><th>Réf. MoMo</th><th>Lot</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">Aucune collecte.</p>'),
+      actions:[
+        { label:'<i class="fa-solid fa-draw-polygon"></i> ' + (p.parcel?'Redessiner la parcelle':'Cartographier'), cls:'btn-ghost', onClick:()=>{ UI.closeModal(); App.go('agent'); Agent.showPane('parcel'); Agent.selectParcelProducer(p.id); } },
+        { label:'<i class="fa-solid fa-scale-balanced"></i> Nouvelle pesée', cls:'btn-ghost', onClick:()=>{ UI.closeModal(); App.go('agent'); Agent.showPane('harvest'); Agent.selectHarvestProducer(p.id); } },
+        { label:'<i class="fa-solid fa-print"></i> Imprimer', cls:'btn-primary', onClick:UI.printModal }
+      ]
+    });
+    UI.qr($('#sheetQr'), Agent.qrPayload(p), 116);
+  },
+  printModal(){
+    document.body.classList.add('printing-modal');
+    const done = () => { document.body.classList.remove('printing-modal'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 1000);
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Maps : fonds de carte communs (OSM + Esri World Imagery)
+   ------------------------------------------------------------------------ */
+const Maps = {
+  available(){ return typeof L !== 'undefined'; },
+  baseLayers(){
+    return {
+      'Satellite (Esri)': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Imagerie &copy; Esri, Maxar, Earthstar Geographics' }),
+      'OpenStreetMap': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; contributeurs OpenStreetMap' })
+    };
+  },
+  protectedLayer(){
+    return L.layerGroup(CONFIG.protectedAreas.map(pa => L.polygon(pa.coords, { color:'#D62828', weight:2, dashArray:'6 4', fillColor:'#D62828', fillOpacity:.12 }).bindTooltip(pa.name + ' (contour simplifié)')));
+  },
+  fallback(el){ el.innerHTML = '<div class="map-fallback"><div><i class="fa-solid fa-map" style="font-size:2rem"></i><br>Carte indisponible : Leaflet n\'a pas pu être chargé (réseau absent au premier lancement).<br>Les calculs GPS et la saisie restent fonctionnels.</div></div>'; }
+};
+
+/* ------------------------------------------------------------------------
+   Agent : module terrain
+   ------------------------------------------------------------------------ */
+const Agent = {
+  pts: [], sim: null, map: null, layer: null,
+  init(){
+    // Sous-navigation
+    $$('.subnav button').forEach(b => b.addEventListener('click', () => this.showPane(b.dataset.pane)));
+    // Listes déroulantes
+    const byT = {};
+    CONFIG.villages.forEach(v => (byT[v.territoire + ' (' + v.province + ')'] = byT[v.territoire + ' (' + v.province + ')'] || []).push(v));
+    $('#pVillage').innerHTML = '<option value="">Choisir...</option>' + Object.entries(byT).map(([t, vs]) => '<optgroup label="' + t + '">' + vs.map(v => '<option>' + v.name + '</option>').join('') + '</optgroup>').join('');
+    const fil = Object.keys(CONFIG.filieres).map(f => '<option>' + f + '</option>').join('');
+    $('#pFiliere').innerHTML = '<option value="">Choisir...</option>' + fil;
+    $('#hFiliere').innerHTML = fil;
+    $('#hOperator').innerHTML = Object.entries(CONFIG.operators).map(([k,o]) => '<option value="' + k + '">' + o.label + '</option>').join('');
+    // Formulaire producteur
+    $('#producerForm').addEventListener('submit', e => { e.preventDefault(); this.saveProducer(); });
+    $('#pPhone').addEventListener('blur', () => {
+      const n = Util.normPhone($('#pPhone').value);
+      if(n){ $('#pPhone').value = Util.fmtPhone(n); $('#pPhoneHint').textContent = 'Opérateur détecté : ' + CONFIG.operators[Util.operatorFor(n)].label; }
+    });
+    // Parcelle
+    $('#parcelProducer').addEventListener('change', e => this.selectParcelProducer(e.target.value));
+    $('#gpsRealBtn').addEventListener('click', () => this.captureReal());
+    $('#gpsSimBtn').addEventListener('click', () => this.captureSim());
+    $('#gpsAutoBtn').addEventListener('click', () => { const need = Math.max(0, 6 - this.pts.length); for(let i=0;i<need;i++) this.captureSim(true); this.renderParcel(true); });
+    $('#gpsUndoBtn').addEventListener('click', () => { this.pts.pop(); this.renderParcel(); });
+    $('#gpsClearBtn').addEventListener('click', () => { this.pts = []; this.sim = null; this.renderParcel(); });
+    $('#gpsSaveBtn').addEventListener('click', () => this.saveParcel());
+    // Pesée
+    $('#harvestForm').addEventListener('submit', e => { e.preventDefault(); this.saveHarvest(); });
+    $('#hProducer').addEventListener('change', e => this.selectHarvestProducer(e.target.value));
+    ['#hFiliere'].forEach(s => $(s).addEventListener('change', () => this.updatePrice()));
+    $$('input[name=grade]').forEach(r => r.addEventListener('change', () => this.updatePrice()));
+    ['#hWeight','#hPrice'].forEach(s => $(s).addEventListener('input', () => this.updateTotals()));
+    // Liste
+    $('#prodSearch').addEventListener('input', () => this.renderList());
+  },
+  showPane(name){
+    $$('.subnav button').forEach(b => b.classList.toggle('active', b.dataset.pane === name));
+    $$('.agent-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+    if(name === 'parcel') this.ensureMap();
+    window.scrollTo({ top:0, behavior:'smooth' });
+  },
+  refresh(){
+    $('#nextProdId').textContent = Store.nextProducerId();
+    $('#nextHarvId').textContent = Store.nextHarvestId();
+    $('#agentHello').textContent = Store.s.agent + ' · Masisi, Rutshuru, Beni, Kalehe';
+    const opts = Store.data.producers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p => '<option value="' + p.id + '">' + Util.esc(p.name) + ' · ' + p.id + ' · ' + Util.esc(p.village) + '</option>').join('');
+    const cp = $('#parcelProducer').value, ch = $('#hProducer').value;
+    $('#parcelProducer').innerHTML = '<option value="">Choisir un producteur...</option>' + opts;
+    $('#hProducer').innerHTML = '<option value="">Choisir un producteur...</option>' + opts;
+    if(cp && Store.producer(cp)) $('#parcelProducer').value = cp;
+    if(ch && Store.producer(ch)) $('#hProducer').value = ch;
+    this.renderList();
+  },
+  // Charge utile ASCII : qrcode.js calcule mal la taille des chaînes UTF-8 accentuées
+  qrPayload(p){ return ['KIVUTRACE', p.id, p.name, p.village, p.filiere, p.phone].join('|').normalize('NFD').replace(/[^\x20-\x7E]/g, ''); },
+
+  /* ---- Enregistrement producteur ---- */
+  saveProducer(){
+    const name = $('#pName').value.trim().replace(/\s+/g,' ');
+    const sex = ($('input[name=sex]:checked') || {}).value;
+    const phone = Util.normPhone($('#pPhone').value);
+    const voter = $('#pVoter').value.trim();
+    const village = $('#pVillage').value, filiere = $('#pFiliere').value;
+    const errs = [];
+    $$('#producerForm .input').forEach(i => i.classList.remove('invalid'));
+    if(name.length < 3){ errs.push('nom'); $('#pName').classList.add('invalid'); }
+    if(!sex) errs.push('sexe');
+    if(!phone){ errs.push('téléphone (+243 suivi de 9 chiffres)'); $('#pPhone').classList.add('invalid'); }
+    if(voter.length < 4){ errs.push('n° carte d\'électeur'); $('#pVoter').classList.add('invalid'); }
+    if(!village){ errs.push('village'); $('#pVillage').classList.add('invalid'); }
+    if(!filiere){ errs.push('filière'); $('#pFiliere').classList.add('invalid'); }
+    if(!$('#pConsent').checked) errs.push('consentement');
+    if(errs.length){ $('#producerErr').textContent = 'À compléter : ' + errs.join(', ') + '.'; return; }
+    const dup = Store.data.producers.find(p => p.phone === phone || p.voterId.toLowerCase() === voter.toLowerCase());
+    if(dup){ $('#producerErr').textContent = 'Doublon possible : ' + dup.name + ' (' + dup.id + ') a déjà ce ' + (dup.phone === phone ? 'téléphone' : 'n° d\'électeur') + '.'; return; }
+    $('#producerErr').textContent = '';
+    const p = { id:Store.nextProducerId(), name, sex, phone, village, filiere, voterId:voter, consent:true, createdAt:new Date().toISOString(), synced:false, parcel:null };
+    Store.data.producers.push(p); Store.data.seq.producer++;
+    Store.enqueue('PRODUCER_CREATE', p.id, 'Nouveau producteur ' + p.id + ' : ' + p.name + ' (' + p.village + ')');
+    $('#producerForm').reset(); $('#pPhoneHint').textContent = 'Format RDC : +243 suivi de 9 chiffres';
+    App.refreshAll();
+    UI.modal({
+      title:'Producteur enregistré',
+      body:'<div class="idcard"><div class="idcard-head"><span>' + Util.esc(Store.s.coop) + '</span><span class="mono">' + p.id + '</span></div><div class="idcard-body"><dl><dt>Nom</dt><dd>' + Util.esc(p.name) + '</dd><dt>Sexe</dt><dd>' + (p.sex==='F'?'Femme':'Homme') +
+        '</dd><dt>Tél.</dt><dd>' + Util.fmtPhone(p.phone) + '</dd><dt>Village</dt><dd>' + Util.esc(p.village) + '</dd><dt>Filière</dt><dd>' + Util.esc(p.filiere) + '</dd></dl><div class="qr-box" id="newQr"></div></div></div>' +
+        '<p class="small muted" style="text-align:center">' + (Net.online ? 'Enregistré localement, synchronisation automatique en cours.' : 'Enregistré sur l\'appareil. Sera synchronisé au retour du réseau.') + '</p>',
+      actions:[
+        { label:'<i class="fa-solid fa-print"></i> Imprimer la carte', cls:'btn-ghost', onClick:UI.printModal },
+        { label:'<i class="fa-solid fa-draw-polygon"></i> Cartographier sa parcelle', cls:'btn-primary', onClick:()=>{ UI.closeModal(); this.showPane('parcel'); this.selectParcelProducer(p.id); } }
+      ]
+    });
+    UI.qr($('#newQr'), this.qrPayload(p), 120);
+  },
+
+  /* ---- Cartographie GPS ---- */
+  ensureMap(){
+    if(this.map || !Maps.available()){ if(!Maps.available()) Maps.fallback($('#parcelMap')); else setTimeout(()=>this.map.invalidateSize(), 50); return; }
+    const base = Maps.baseLayers();
+    this.map = L.map('parcelMap', { layers:[base['Satellite (Esri)']], zoomControl:true }).setView([-1.6, 29.1], 9);
+    L.control.layers(base, { 'Aires protégées': Maps.protectedLayer().addTo(this.map) }).addTo(this.map);
+    this.layer = L.layerGroup().addTo(this.map);
+    this.map.on('click', e => {
+      if(!$('#parcelProducer').value){ UI.toast('Choisissez d\'abord un producteur.', 'warn'); return; }
+      this.pts.push({ lat:+e.latlng.lat.toFixed(6), lng:+e.latlng.lng.toFixed(6), acc:null, src:'manuel', ts:new Date().toISOString() });
+      this.renderParcel();
+    });
+    setTimeout(() => this.map.invalidateSize(), 50);
+    this.renderParcel();
+  },
+  selectParcelProducer(id){
+    $('#parcelProducer').value = id || '';
+    const p = Store.producer(id);
+    this.sim = null;
+    this.pts = p && p.parcel ? p.parcel.coords.map(c => ({ lat:c[0], lng:c[1], acc:null, src:'enregistré', ts:p.parcel.capturedAt })) : [];
+    $('#parcelProdBadge').className = 'badge ' + (p ? 'b-blue' : 'b-grey');
+    $('#parcelProdBadge').textContent = p ? p.id : 'Aucun producteur';
+    this.ensureMap();
+    if(this.map && p){
+      const v = Util.village(p.village);
+      if(this.pts.length) this.map.fitBounds(L.latLngBounds(this.pts.map(x=>[x.lat,x.lng])).pad(0.6));
+      else this.map.setView([v.lat, v.lng], 15);
+    }
+    this.renderParcel();
+  },
+  requireProducer(){
+    const p = Store.producer($('#parcelProducer').value);
+    if(!p) UI.toast('Choisissez d\'abord un producteur.', 'warn');
+    return p;
+  },
+  captureReal(){
+    if(!this.requireProducer()) return;
+    if(!('geolocation' in navigator)){ UI.toast('GPS non disponible sur cet appareil. Utilisez la simulation.', 'error'); return; }
+    const btn = $('#gpsRealBtn'); const old = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Recherche des satellites...';
+    navigator.geolocation.getCurrentPosition(pos => {
+      btn.disabled = false; btn.innerHTML = old;
+      this.pts.push({ lat:+pos.coords.latitude.toFixed(6), lng:+pos.coords.longitude.toFixed(6), acc:Math.round(pos.coords.accuracy), src:'gps', ts:new Date().toISOString() });
+      if(pos.coords.accuracy > 20) UI.toast('Précision faible (' + Math.round(pos.coords.accuracy) + ' m). Attendez quelques secondes à découvert puis recapturez.', 'warn');
+      this.renderParcel(true);
+    }, err => {
+      btn.disabled = false; btn.innerHTML = old;
+      const msg = { 1:'Autorisation GPS refusée.', 2:'Position indisponible.', 3:'Délai GPS dépassé.' }[err.code] || 'Erreur GPS.';
+      UI.toast(msg + ' Utilisez "Simuler un relevé GPS terrain" pour la démo.', 'error');
+    }, { enableHighAccuracy:true, timeout:15000, maximumAge:0 });
+  },
+  // Simule une marche autour d'une parcelle près du village du producteur
+  captureSim(silent){
+    const p = this.requireProducer(); if(!p) return;
+    const v = Util.village(p.village);
+    if(!this.sim){
+      const c = this.pts.length ? [this.pts[0].lat, this.pts[0].lng] : [v.lat + (Math.random()-.5)*0.008, v.lng + (Math.random()-.5)*0.008];
+      this.sim = { lat:c[0], lng:c[1], start:Math.random()*Math.PI*2, step:0, radius:45 + Math.random()*40 };
+    }
+    const s = this.sim;
+    const ang = s.start + s.step * (Math.PI*2/6) + (Math.random()-.5)*0.35;
+    const r = s.radius * (0.8 + Math.random()*0.4);
+    s.step++;
+    const lat = s.lat + (r*Math.sin(ang))/111320;
+    const lng = s.lng + (r*Math.cos(ang))/(111320*Math.cos(Geo.rad(s.lat)));
+    this.pts.push({ lat:+lat.toFixed(6), lng:+lng.toFixed(6), acc:3+Math.round(Math.random()*5), src:'simulé', ts:new Date().toISOString() });
+    if(!silent) this.renderParcel(true);
+  },
+  coords(){ return this.pts.map(p => [p.lat, p.lng]); },
+  renderParcel(fit){
+    const c = this.coords();
+    const area = Geo.areaHa(c), per = Geo.perimeter(c, c.length > 2);
+    $('#gpsCount').textContent = c.length;
+    $('#gpsArea').textContent = Util.num(area, 2) + ' ha';
+    $('#gpsPerim').textContent = Util.num(per) + ' m';
+    const box = $('#eudrBox');
+    const p = Store.producer($('#parcelProducer').value);
+    let ok = false;
+    if(c.length < 4){
+      box.className = 'eudr-box na';
+      box.innerHTML = '<i class="fa-solid fa-circle-info"></i><span>' + (c.length ? 'Encore ' + (4-c.length) + ' point(s) minimum pour fermer le polygone.' : 'Ajoutez au moins 4 points GPS pour fermer le polygone.') + '</span>';
+    } else if(Geo.selfIntersects(c)){
+      box.className = 'eudr-box ko';
+      box.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Polygone auto-sécant : les points ne suivent pas le contour. Annulez le dernier point ou recommencez dans l\'ordre de marche.</span>';
+    } else {
+      const chk = Geo.eudrCheck(c);
+      const scope = p && !EUDR_SCOPE.includes(p.filiere) ? '<div class="small" style="font-weight:500">Filière ' + Util.esc(p.filiere) + ' hors règlement EUDR : géolocalisation conservée pour la traçabilité interne.</div>' : '';
+      if(chk.status === 'conforme'){ box.className = 'eudr-box ok'; box.innerHTML = '<i class="fa-solid fa-leaf"></i><div>Conforme EUDR : hors aire protégée. Coordonnées WGS84 à 6 décimales.' + scope + '</div>'; }
+      else { box.className = 'eudr-box ko'; box.innerHTML = '<i class="fa-solid fa-ban"></i><div>Non conforme : la parcelle chevauche ' + Util.esc(chk.area) + '.' + scope + '</div>'; }
+      ok = true;
+    }
+    $('#gpsSaveBtn').disabled = !ok || !p;
+    const list = $('#ptList');
+    list.classList.toggle('hidden', !c.length);
+    list.innerHTML = this.pts.map((x,i) => '<div><span><b>P' + (i+1) + '</b> <span class="mono">' + x.lat.toFixed(6) + ', ' + x.lng.toFixed(6) + '</span></span><span class="muted">' + x.src + (x.acc ? ' ±' + x.acc + ' m' : '') + '</span></div>').join('');
+    if(!this.map) return;
+    this.layer.clearLayers();
+    if(c.length >= 3) L.polygon(c, { color:ok ? (box.classList.contains('ok') ? '#52B788' : '#D62828') : '#FFD166', weight:3, fillOpacity:.25 }).addTo(this.layer);
+    else if(c.length === 2) L.polyline(c, { color:'#FFD166', weight:3 }).addTo(this.layer);
+    c.forEach((pt,i) => L.marker(pt, { icon:L.divIcon({ className:'pt-icon', html:String(i+1), iconSize:[26,26] }) }).addTo(this.layer));
+    if(fit && c.length){ if(c.length === 1) this.map.setView(c[0], 17); else this.map.fitBounds(L.latLngBounds(c).pad(0.5)); }
+  },
+  saveParcel(){
+    const p = Store.producer($('#parcelProducer').value); if(!p) return;
+    const c = this.coords();
+    if(c.length < 4 || Geo.selfIntersects(c)) return;
+    const eudr = Geo.eudrCheck(c);
+    const method = [...new Set(this.pts.map(x => x.src))].join('+');
+    const doSave = () => {
+      p.parcel = { coords:c, areaHa:Util.round2(Geo.areaHa(c)), perimeterM:Math.round(Geo.perimeter(c)), capturedAt:new Date().toISOString(), method, eudr };
+      p.synced = false;
+      Store.enqueue('PARCEL_UPDATE', p.id, 'Parcelle ' + p.id + ' : ' + Util.num(p.parcel.areaHa,2) + ' ha, ' + c.length + ' sommets (' + (eudr.status==='conforme'?'conforme':'NON conforme') + ')');
+      App.refreshAll();
+      UI.closeModal();
+      UI.toast('Parcelle de ' + p.name + ' enregistrée : ' + Util.num(p.parcel.areaHa,2) + ' ha.', eudr.status === 'conforme' ? 'success' : 'error');
+    };
+    if(p.parcel) UI.confirm('Remplacer la parcelle ?', '<p>' + Util.esc(p.name) + ' a déjà une parcelle de ' + Util.num(p.parcel.areaHa,2) + ' ha. La nouvelle géométrie la remplacera.</p>', 'Remplacer', doSave);
+    else doSave();
+  },
+
+  /* ---- Pesée ---- */
+  selectHarvestProducer(id){
+    $('#hProducer').value = id || '';
+    const p = Store.producer(id);
+    if(p){
+      $('#hFiliere').value = p.filiere;
+      $('#hOperator').value = Util.operatorFor(p.phone);
+      $('#hProducerHint').innerHTML = Util.esc(p.village) + ' · ' + Util.esc(Util.fmtPhone(p.phone)) + ' · ' + UI.eudrBadge(p);
+    } else $('#hProducerHint').textContent = '';
+    this.updatePrice();
+  },
+  updatePrice(){
+    const f = $('#hFiliere').value, g = ($('input[name=grade]:checked')||{}).value || 'A';
+    $('#hPrice').value = Store.price(f, g).toFixed(2);
+    $('#hPriceHint').textContent = 'Prix du jour ' + f + ' grade ' + g + ' (modifiable dans Paramètres)';
+    this.updateTotals();
+  },
+  updateTotals(){
+    const w = parseFloat($('#hWeight').value) || 0, pr = parseFloat($('#hPrice').value) || 0;
+    const t = Util.round2(w * pr);
+    $('#hTotalUsd').textContent = Util.usd(t);
+    $('#hTotalCdf').textContent = Util.cdf(t * Store.s.rate);
+  },
+  saveHarvest(){
+    const p = Store.producer($('#hProducer').value);
+    const w = parseFloat($('#hWeight').value), pr = parseFloat($('#hPrice').value);
+    const g = ($('input[name=grade]:checked')||{}).value;
+    const errs = [];
+    if(!p) errs.push('producteur');
+    if(!(w > 0) || w > 20000) errs.push('poids (entre 0,1 et 20 000 kg)');
+    if(!(pr > 0) || pr > 50) errs.push('prix unitaire');
+    if(errs.length){ $('#harvestErr').textContent = 'À corriger : ' + errs.join(', ') + '.'; return; }
+    $('#harvestErr').textContent = '';
+    const filiere = $('#hFiliere').value;
+    const total = Util.round2(w * pr);
+    const h = {
+      id:Store.nextHarvestId(), producerId:p.id, filiere, date:new Date().toISOString(), weightKg:Util.round2(w), grade:g, priceUsd:Util.round2(pr),
+      totalUsd:total, totalCdf:Math.round(total*Store.s.rate), rate:Store.s.rate, operator:$('#hOperator').value,
+      status:'pending', txRef:null, paidAt:null, paidCurrency:null, synced:false, lotId:null, agent:Store.s.agent
+    };
+    Store.data.harvests.push(h); Store.data.seq.harvest++;
+    Store.enqueue('HARVEST_CREATE', h.id, 'Pesée ' + h.id + ' : ' + Util.kg(h.weightKg) + ' ' + filiere + ' (' + p.name + ')');
+    const m = SMS.send(p, SMS.harvestText(p, h));
+    $('#hWeight').value = ''; this.updateTotals();
+    App.refreshAll();
+    SMS.preview(m, 'Pesée ' + h.id + ' enregistrée ' + (Net.online ? 'et envoyée en synchronisation.' : 'sur l\'appareil (hors ligne). SMS placé en file d\'envoi.'));
+  },
+
+  /* ---- Liste ---- */
+  renderList(){
+    const q = $('#prodSearch').value.trim().toLowerCase();
+    const list = Store.data.producers.filter(p => !q || [p.name,p.id,p.village,p.phone,p.filiere].join(' ').toLowerCase().includes(q)).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    $('#prodCountBadge').textContent = Store.data.producers.length;
+    $('#prodList').innerHTML = list.length ? list.map(p => '<button class="pcard" data-id="' + p.id + '"><div class="avatar" style="background:' + UI.avatarColor(p.sex) + '">' + Util.esc(Util.initials(p.name)) + '</div><div class="meta"><b>' + Util.esc(p.name) +
+      '</b><span class="small muted">' + p.id + ' · ' + Util.esc(p.village) + ' · ' + Util.esc(p.filiere) + '</span><div class="tags">' + UI.eudrBadge(p) + (p.parcel ? '<span class="badge b-grey">' + Util.num(p.parcel.areaHa,2) + ' ha</span>' : '') + UI.syncBadge(p.synced) +
+      '</div></div><i class="fa-solid fa-chevron-right muted"></i></button>').join('') : '<div class="empty"><i class="fa-solid fa-user-slash"></i>Aucun producteur trouvé</div>';
+    $$('#prodList .pcard').forEach(b => b.addEventListener('click', () => UI.producerSheet(b.dataset.id)));
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Coop : tableau de bord coopérative
+   ------------------------------------------------------------------------ */
+const Coop = {
+  ready:false,
+  init(){
+    $('#syncBtn').addEventListener('click', () => Net.sync(false));
+    const terr = [...new Set(CONFIG.villages.map(v => v.territoire))];
+    $('#fTerritoire').innerHTML = '<option value="">Tous territoires</option>' + terr.map(t => '<option>' + t + '</option>').join('');
+    $('#fFiliere').innerHTML = '<option value="">Toutes filières</option>' + Object.keys(CONFIG.filieres).map(f => '<option>' + f + '</option>').join('');
+    ['#fSearch','#fTerritoire','#fFiliere','#fStatus'].forEach(s => $(s).addEventListener('input', () => this.renderRegister()));
+    $('#fReset').addEventListener('click', () => { ['#fSearch','#fTerritoire','#fFiliere','#fStatus'].forEach(s => $(s).value = ''); this.renderRegister(); });
+    $('#payAllBtn').addEventListener('click', () => this.payBatch());
+    $('#truckCap').textContent = CONFIG.truckCapacityT;
+    // Délégation d'événements sur les tableaux
+    $('#regTable').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]'); if(!b) return;
+      if(b.dataset.act === 'pay') this.payOne(b.dataset.id);
+      if(b.dataset.act === 'sheet') UI.producerSheet(b.dataset.id);
+    });
+    $('#logTable').addEventListener('click', e => { const b = e.target.closest('button[data-axe]'); if(b) this.dispatch(b.dataset.axe); });
+    $('#lotTable').addEventListener('click', e => { const b = e.target.closest('button[data-lot]'); if(b) this.lotDetail(b.dataset.lot); });
+    this.ready = true;
+  },
+  render(){ this.renderKpis(); this.renderQueue(); this.renderRegister(); this.renderLogistics(); },
+  renderKpis(){
+    const hs = Store.data.harvests;
+    const pend = hs.filter(h => h.status === 'pending'), paid = hs.filter(h => h.status === 'paid');
+    const stockKg = hs.filter(h => !h.lotId).reduce((s,h)=>s+h.weightKg,0);
+    $('#coopKpis').innerHTML =
+      this.kpi('fa-cloud-arrow-up','En file de sync', Store.data.queue.length, 'opérations locales') +
+      this.kpi('fa-hourglass-half','À payer', Util.usd0(pend.reduce((s,h)=>s+h.totalUsd,0)), pend.length + ' collecte(s) en attente') +
+      this.kpi('fa-money-bill-wave','Versé via Mobile Money', Util.usd0(paid.reduce((s,h)=>s+h.totalUsd,0)), paid.length + ' transaction(s)', true) +
+      this.kpi('fa-boxes-stacked','Stock à enlever', Util.num(stockKg/1000,2) + ' t', 'en attente de camion');
+  },
+  kpi(icon, k, v, s, accent){ return '<div class="kpi' + (accent?' accent':'') + '"><div class="k"><i class="fa-solid ' + icon + '"></i> ' + k + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; },
+  renderQueue(){
+    const q = Store.data.queue;
+    const icons = { PRODUCER_CREATE:'fa-user-plus', PARCEL_UPDATE:'fa-draw-polygon', HARVEST_CREATE:'fa-scale-balanced', PAYMENT:'fa-money-bill-transfer' };
+    const names = { PRODUCER_CREATE:'Producteur', PARCEL_UPDATE:'Parcelle', HARVEST_CREATE:'Pesée', PAYMENT:'Paiement' };
+    $('#lastSync').textContent = Store.data.lastSync ? 'Dernière sync : ' + Util.dateTime(Store.data.lastSync) : 'Jamais synchronisé';
+    const sb = $('#syncBtn'); sb.disabled = !Net.online || Net.syncing || !q.length;
+    let html = q.length
+      ? '<div class="table-wrap"><table class="tbl"><thead><tr><th>Type</th><th>Opération</th><th>Saisie le</th><th>État</th></tr></thead><tbody>' +
+        q.slice().reverse().map(o => '<tr><td class="nowrap"><i class="fa-solid ' + icons[o.type] + '" style="color:var(--blue)"></i> ' + names[o.type] + '</td><td>' + Util.esc(o.label) + '</td><td class="nowrap">' + Util.dateTime(o.ts) +
+          '</td><td><span class="badge b-amber"><i class="fa-solid fa-mobile-screen"></i> En attente</span></td></tr>').join('') + '</tbody></table></div>'
+      : '<div class="empty"><i class="fa-solid fa-cloud"></i>Toutes les données sont synchronisées avec le serveur central.</div>';
+    if(!Net.online && q.length) html = '<div class="eudr-box ko" style="margin-bottom:10px;background:var(--amber-light);color:#A2462E"><i class="fa-solid fa-plug-circle-xmark"></i><span>Hors ligne : ' + q.length + ' opération(s) conservée(s) sur l\'appareil. Elles partiront automatiquement au retour du réseau.</span></div>' + html;
+    if(Store.data.syncLog.length) html += '<details style="margin-top:10px"><summary class="small muted" style="cursor:pointer">Historique des ' + Math.min(10, Store.data.syncLog.length) + ' dernières opérations synchronisées</summary><div class="table-wrap" style="margin-top:8px"><table class="tbl"><tbody>' +
+      Store.data.syncLog.slice(0,10).map(o => '<tr><td>' + Util.esc(o.label) + '</td><td class="nowrap small muted">' + Util.dateTime(o.syncedAt) + '</td></tr>').join('') + '</tbody></table></div></details>';
+    $('#queueBox').innerHTML = html;
+  },
+  filtered(){
+    const q = $('#fSearch').value.trim().toLowerCase(), t = $('#fTerritoire').value, f = $('#fFiliere').value, st = $('#fStatus').value;
+    return Store.data.harvests.filter(h => {
+      const p = Store.producer(h.producerId) || { name:'?', village:'' };
+      if(t && Util.village(p.village).territoire !== t) return false;
+      if(f && h.filiere !== f) return false;
+      if(st && h.status !== st) return false;
+      if(q && ![h.id, p.name, p.id, h.txRef || '', p.village].join(' ').toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a,b) => b.date.localeCompare(a.date));
+  },
+  renderRegister(){
+    const rows = this.filtered();
+    const tot = rows.reduce((a,h) => ({ kg:a.kg+h.weightKg, usd:a.usd+h.totalUsd, cdf:a.cdf+h.totalCdf }), { kg:0, usd:0, cdf:0 });
+    $('#payAllBtn').disabled = !rows.some(h => h.status === 'pending');
+    $('#regTable').innerHTML = '<thead><tr><th>Date</th><th>Collecte</th><th>Producteur</th><th>Village</th><th>Filière</th><th>Gr.</th><th class="num">Poids</th><th class="num">$/kg</th><th class="num">Montant USD</th><th class="num">CDF</th><th>Statut</th><th>Réf. transaction</th><th>Action</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(h => {
+        const p = Store.producer(h.producerId) || { name:'?', village:'?', id:'' };
+        return '<tr><td class="nowrap">' + Util.date(h.date) + '</td><td class="mono nowrap">' + h.id + (h.synced ? '' : ' <i class="fa-solid fa-mobile-screen" style="color:var(--amber)" title="Non synchronisé"></i>') + '</td><td><button class="btn-link" data-act="sheet" data-id="' + p.id + '" style="border:0;background:none;color:var(--blue-dark);font-weight:600;cursor:pointer;padding:0;text-align:left">' + Util.esc(p.name) +
+          '</button></td><td>' + Util.esc(p.village) + '</td><td class="nowrap">' + Util.esc(h.filiere) + '</td><td>' + h.grade + '</td><td class="num">' + Util.kg(h.weightKg) + '</td><td class="num">' + h.priceUsd.toFixed(2) + '</td><td class="num"><b>' + Util.usd(h.totalUsd) + '</b></td><td class="num">' + Util.cdf(h.totalCdf) +
+          '</td><td>' + UI.statusBadge(h) + '</td><td class="mono small nowrap">' + (h.txRef ? h.txRef + '<div class="muted">' + CONFIG.operators[h.operator].short + '</div>' : '') + '</td><td>' +
+          (h.status === 'pending' ? '<button class="btn btn-green btn-sm nowrap" data-act="pay" data-id="' + h.id + '"><i class="fa-solid fa-mobile-screen-button"></i> Payer via Mobile Money</button>' : '<span class="small muted nowrap">' + Util.dateTime(h.paidAt) + '</span>') + '</td></tr>';
+      }).join('') : '<tr><td colspan="13"><div class="empty"><i class="fa-solid fa-filter"></i>Aucune collecte ne correspond aux filtres.</div></td></tr>') +
+      '</tbody><tfoot><tr><td colspan="6">' + rows.length + ' collecte(s)</td><td class="num">' + Util.kg(tot.kg) + '</td><td></td><td class="num">' + Util.usd(tot.usd) + '</td><td class="num">' + Util.cdf(tot.cdf) + '</td><td colspan="3"></td></tr></tfoot>';
+  },
+
+  /* ---- Paiement Mobile Money (API simulée) ---- */
+  payOne(id){
+    const h = Store.data.harvests.find(x => x.id === id); if(!h || h.status === 'paid') return;
+    const p = Store.producer(h.producerId);
+    if(!Net.online){ UI.toast('Paiement impossible hors ligne : l\'API Mobile Money exige une connexion. Réessayez une fois en ligne.', 'error'); return; }
+    UI.modal({
+      title:'Décaissement Mobile Money',
+      body:'<dl class="kv"><dt>Bénéficiaire</dt><dd>' + Util.esc(p.name) + ' (' + p.id + ')</dd><dt>Téléphone</dt><dd>' + Util.fmtPhone(p.phone) + '</dd><dt>Collecte</dt><dd>' + h.id + ' · ' + Util.kg(h.weightKg) + ' ' + Util.esc(h.filiere) + ' grade ' + h.grade +
+        '</dd><dt>Montant</dt><dd style="font-size:1.2rem;color:var(--blue-ink)">' + Util.usd(h.totalUsd) + ' <span class="muted small">soit ' + Util.cdf(h.totalCdf) + '</span></dd></dl>' +
+        '<div class="form-grid cols-2" style="margin-top:16px"><div><label class="lbl" for="payOp">Opérateur</label><select class="input" id="payOp">' + Object.entries(CONFIG.operators).map(([k,o]) => '<option value="' + k + '"' + (k===h.operator?' selected':'') + '>' + o.label + '</option>').join('') +
+        '</select></div><div><label class="lbl" for="payCur">Devise du portefeuille</label><select class="input" id="payCur"><option value="USD">USD</option><option value="CDF">CDF</option></select></div></div><div id="payStatus"></div>',
+      actions:[{ label:'Annuler', cls:'btn-ghost', onClick:UI.closeModal }, { id:'payConfirm', label:'<i class="fa-solid fa-paper-plane"></i> Confirmer le paiement', cls:'btn-green', onClick:()=>this.execPay([h], $('#payOp').value, $('#payCur').value) }]
+    });
+  },
+  payBatch(){
+    const list = this.filtered().filter(h => h.status === 'pending');
+    if(!list.length) return;
+    if(!Net.online){ UI.toast('Paiement impossible hors ligne.', 'error'); return; }
+    const total = list.reduce((s,h)=>s+h.totalUsd,0);
+    UI.confirm('Paiement groupé', '<p>' + list.length + ' collecte(s) en attente seront payées pour un total de <b>' + Util.usd(total) + '</b>, chacune via l\'opérateur détecté sur le numéro du producteur.</p><div id="payStatus"></div>',
+      '<i class="fa-solid fa-paper-plane"></i> Payer ' + list.length + ' producteur(s)', () => this.execPay(list, null, 'USD'), 'btn-green');
+  },
+  async execPay(list, op, cur){
+    const st = $('#payStatus');
+    $$('.modal-foot button').forEach(b => b.disabled = true);
+    const done = [];
+    for(let i=0;i<list.length;i++){
+      const h = list[i]; const p = Store.producer(h.producerId);
+      const operator = op || Util.operatorFor(p.phone);
+      if(st) st.innerHTML = '<div style="text-align:center;margin-top:14px"><div class="spinner"></div><div class="small">Appel API ' + CONFIG.operators[operator].short + ' B2C (' + (i+1) + '/' + list.length + ') pour ' + Util.esc(p.name) + '...</div></div>';
+      await Util.sleep(list.length > 1 ? 500 : 1300);
+      if(!Net.online){ UI.toast('Connexion perdue : ' + done.length + ' paiement(s) effectué(s), les autres restent en attente.', 'error'); break; }
+      h.operator = operator; h.status = 'paid'; h.paidAt = new Date().toISOString(); h.paidCurrency = cur; h.txRef = Util.txRef(operator); h.synced = false;
+      Store.enqueue('PAYMENT', h.id, 'Paiement ' + h.txRef + ' : ' + Util.usd(h.totalUsd) + ' à ' + p.name);
+      SMS.send(p, SMS.paymentText(p, h));
+      done.push(h);
+    }
+    Store.save(); App.refreshAll();
+    if(!done.length){ UI.closeModal(); return; }
+    const last = done[done.length-1];
+    UI.modal({
+      title:'Paiement confirmé',
+      body:'<div class="eudr-box ok" style="margin-bottom:14px"><i class="fa-solid fa-circle-check"></i><span>' + done.length + ' paiement(s) exécuté(s), total ' + Util.usd(done.reduce((s,h)=>s+h.totalUsd,0)) + '.</span></div>' +
+        '<div class="table-wrap"><table class="tbl"><thead><tr><th>Producteur</th><th class="num">Montant</th><th>Réf. transaction</th></tr></thead><tbody>' +
+        done.map(h => '<tr><td>' + Util.esc(Store.producer(h.producerId).name) + '</td><td class="num">' + (h.paidCurrency==='CDF' ? Util.cdf(h.totalCdf) : Util.usd(h.totalUsd)) + '</td><td class="mono">' + h.txRef + '</td></tr>').join('') + '</tbody></table></div>',
+      actions:[{ label:'<i class="fa-solid fa-comment-sms"></i> Voir le SMS reçu', cls:'btn-ghost', onClick:()=>{ UI.closeModal(); const m = Store.data.sms.slice().reverse().find(x => x.text.includes(last.txRef)); if(m) SMS.preview(m, 'Notification de paiement ' + last.txRef); } },
+                { label:'OK', cls:'btn-primary', onClick:UI.closeModal }]
+    });
+  },
+
+  /* ---- Logistique ---- */
+  stockByAxe(){
+    const axes = {};
+    Store.data.harvests.filter(h => !h.lotId).forEach(h => {
+      const p = Store.producer(h.producerId); if(!p) return;
+      const v = Util.village(p.village);
+      const ax = axes[v.axe] = axes[v.axe] || { villages:{}, kg:0, usd:0, ids:[] };
+      const vv = ax.villages[v.name] = ax.villages[v.name] || { territoire:v.territoire, producers:new Set(), byF:{}, kg:0, n:0 };
+      vv.producers.add(p.id); vv.byF[h.filiere] = (vv.byF[h.filiere]||0) + h.weightKg; vv.kg += h.weightKg; vv.n++;
+      ax.kg += h.weightKg; ax.usd += h.totalUsd; ax.ids.push(h.id);
+    });
+    return axes;
+  },
+  renderLogistics(){
+    const axes = this.stockByAxe();
+    const keys = Object.keys(axes).sort();
+    const cap = CONFIG.truckCapacityT;
+    let body = '';
+    keys.forEach(k => {
+      const ax = axes[k];
+      Object.entries(ax.villages).forEach(([vn, vv]) => {
+        body += '<tr><td class="small muted">' + Util.esc(k) + '</td><td><b>' + Util.esc(vn) + '</b><div class="small muted">' + vv.territoire + '</div></td><td class="num">' + vv.producers.size + '</td><td class="num">' + vv.n + '</td><td>' +
+          Object.entries(vv.byF).map(([f,kg]) => '<span class="badge b-grey" style="margin:1px">' + Util.esc(f) + ' ' + Util.kg(kg) + '</span>').join(' ') + '</td><td class="num">' + Util.num(vv.kg/1000,2) + ' t</td><td></td></tr>';
+      });
+      const trucks = Math.max(1, Math.ceil(ax.kg/1000/cap));
+      body += '<tr class="subtotal"><td colspan="5">Sous-total ' + Util.esc(k) + ' · valeur ' + Util.usd0(ax.usd) + ' · ' + trucks + ' camion(s) ' + cap + ' t (remplissage ' + Math.round(ax.kg/1000/(trucks*cap)*100) + ' %)</td><td class="num">' + Util.num(ax.kg/1000,2) +
+        ' t</td><td><button class="btn btn-primary btn-sm nowrap" data-axe="' + Util.esc(k) + '"><i class="fa-solid fa-truck-fast"></i> Programmer le ramassage</button></td></tr>';
+    });
+    $('#logTable').innerHTML = '<thead><tr><th>Axe routier</th><th>Village</th><th class="num">Prod.</th><th class="num">Collectes</th><th>Détail par filière</th><th class="num">Stock</th><th>Action</th></tr></thead><tbody>' +
+      (body || '<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-truck"></i>Aucun stock en attente d\'enlèvement.</div></td></tr>') + '</tbody>';
+    const lots = Store.data.lots.slice().sort((a,b) => b.date.localeCompare(a.date));
+    $('#lotTable').innerHTML = '<thead><tr><th>Lot</th><th>Date</th><th>Axe</th><th>Véhicule</th><th class="num">Collectes</th><th class="num">Poids</th><th></th></tr></thead><tbody>' +
+      (lots.length ? lots.map(l => '<tr><td class="mono">' + l.id + '</td><td>' + Util.date(l.date) + '</td><td>' + Util.esc(l.axe) + '</td><td>' + Util.esc(l.truck) + '</td><td class="num">' + l.harvestIds.length + '</td><td class="num">' + Util.num(l.weightKg/1000,2) +
+        ' t</td><td><button class="btn btn-ghost btn-sm" data-lot="' + l.id + '">Détail</button></td></tr>').join('') : '<tr><td colspan="7"><div class="empty">Aucun lot expédié.</div></td></tr>') + '</tbody>';
+  },
+  dispatch(axe){
+    const ax = this.stockByAxe()[axe]; if(!ax) return;
+    UI.confirm('Programmer le ramassage', '<p>Un lot sera créé pour <b>' + Util.esc(axe) + '</b> : ' + ax.ids.length + ' collecte(s), ' + Util.num(ax.kg/1000,2) + ' t. Chaque sac garde le lien vers son producteur et sa parcelle.</p>' +
+      '<label class="lbl" for="truckId">Immatriculation du camion</label><input class="input" id="truckId" value="KV-' + (1000 + Math.floor(Math.random()*9000)) + '">', '<i class="fa-solid fa-truck-fast"></i> Créer le lot', () => {
+      const lot = { id:Store.nextLotId(), axe, date:new Date().toISOString(), harvestIds:ax.ids.slice(), weightKg:ax.kg, truck:'Camion ' + ($('#truckId').value.trim() || 'N/D') };
+      Store.data.lots.push(lot); Store.data.seq.lot++;
+      ax.ids.forEach(id => { const h = Store.data.harvests.find(x => x.id === id); if(h) h.lotId = lot.id; });
+      Store.save(); UI.closeModal(); App.refreshAll();
+      UI.toast('Lot ' + lot.id + ' créé : ' + Util.num(lot.weightKg/1000,2) + ' t sur ' + axe + '.', 'success');
+    });
+  },
+  lotDetail(id){
+    const l = Store.data.lots.find(x => x.id === id); if(!l) return;
+    const hs = l.harvestIds.map(i => Store.data.harvests.find(h => h.id === i)).filter(Boolean);
+    UI.modal({ title:'Lot ' + l.id, wide:true,
+      body:'<p class="small muted" style="margin-top:0">' + Util.esc(l.axe) + ' · ' + Util.esc(l.truck) + ' · ' + Util.date(l.date) + '</p><div class="table-wrap"><table class="tbl"><thead><tr><th>Collecte</th><th>Producteur</th><th>Village</th><th>Filière</th><th class="num">Poids</th><th>Parcelle</th></tr></thead><tbody>' +
+        hs.map(h => { const p = Store.producer(h.producerId); return '<tr><td class="mono">' + h.id + '</td><td>' + Util.esc(p.name) + ' <span class="muted small">' + p.id + '</span></td><td>' + Util.esc(p.village) + '</td><td>' + Util.esc(h.filiere) + '</td><td class="num">' + Util.kg(h.weightKg) + '</td><td>' + UI.eudrBadge(p) + '</td></tr>'; }).join('') + '</tbody></table></div>',
+      actions:[{ label:'Fermer', cls:'btn-primary', onClick:UI.closeModal }] });
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Donor : impact, carte globale, graphiques, exports
+   ------------------------------------------------------------------------ */
+const Donor = {
+  map:null, parcelsLayer:null, charts:{},
+  init(){
+    $('#exportGeoBtn').addEventListener('click', () => this.exportGeoJSON());
+    $('#exportCsvBtn').addEventListener('click', () => this.exportCSV());
+    $('#exportProdCsvBtn').addEventListener('click', () => this.exportProducersCSV());
+    $('#printBtn').addEventListener('click', () => {
+      $('#printMeta').textContent = Store.s.coop + ' · généré le ' + new Date().toLocaleString('fr-FR') + ' · ' + Store.data.producers.length + ' producteurs';
+      window.print();
+    });
+  },
+  stats(){
+    const P = Store.data.producers, H = Store.data.harvests;
+    const women = P.filter(p => p.sex === 'F').length;
+    const mapped = P.filter(p => p.parcel);
+    const area = mapped.reduce((s,p)=>s+p.parcel.areaHa,0);
+    const conform = mapped.filter(p => p.parcel.eudr.status === 'conforme').length;
+    const kg = H.reduce((s,h)=>s+h.weightKg,0);
+    const paid = H.filter(h => h.status === 'paid');
+    const paidUsd = paid.reduce((s,h)=>s+h.totalUsd,0);
+    const paidWomen = paid.filter(h => (Store.producer(h.producerId)||{}).sex === 'F').reduce((s,h)=>s+h.totalUsd,0);
+    return { n:P.length, women, pctW: P.length ? women/P.length*100 : 0, mapped:mapped.length, area, conform, kg, paidUsd, paidWomen, paidN:paid.length };
+  },
+  render(){
+    const s = this.stats();
+    const k = Coop.kpi.bind(Coop);
+    $('#donorKpis').innerHTML =
+      k('fa-users','Producteurs', s.n, s.mapped + ' parcelle(s) cartographiée(s)') +
+      k('fa-venus','Femmes bénéficiaires', Util.num(s.pctW,0) + ' %', s.women + ' femme(s) sur ' + s.n, true) +
+      k('fa-draw-polygon','Superficie tracée', Util.num(s.area,1) + ' ha', 'polygones GPS WGS84') +
+      k('fa-leaf','Parcelles conformes', s.mapped ? Util.num(s.conform/s.mapped*100,0) + ' %' : 'N/D', s.conform + '/' + s.mapped + ' hors aire protégée', true) +
+      k('fa-weight-hanging','Volume collecté', Util.num(s.kg/1000,2) + ' t', Store.data.harvests.length + ' pesées') +
+      k('fa-mobile-screen-button','Versé via Mobile Money', Util.usd0(s.paidUsd), s.paidN + ' transactions directes', true);
+    this.renderMap();
+    this.renderCharts(s);
+  },
+  renderMap(){
+    const el = $('#donorMap');
+    if(!Maps.available()){ Maps.fallback(el); return; }
+    if(!this.map){
+      const base = Maps.baseLayers();
+      this.map = L.map('donorMap', { layers:[base['OpenStreetMap']] }).setView([-1.2, 29.1], 8);
+      this.parcelsLayer = L.featureGroup().addTo(this.map);
+      L.control.layers(base, { 'Parcelles producteurs':this.parcelsLayer, 'Aires protégées (indicatif)': Maps.protectedLayer().addTo(this.map) }).addTo(this.map);
+      const legend = L.control({ position:'bottomright' });
+      legend.onAdd = () => { const d = L.DomUtil.create('div','legend'); d.innerHTML = Object.entries(CONFIG.filieres).map(([f,c]) => '<div><i style="background:' + c.color + '"></i>' + f + '</div>').join('') + '<div><i style="background:#D62828;opacity:.5"></i>Aire protégée</div>'; return d; };
+      legend.addTo(this.map);
+    }
+    this.parcelsLayer.clearLayers();
+    Store.data.producers.filter(p => p.parcel).forEach(p => {
+      const col = CONFIG.filieres[p.filiere].color;
+      const bad = p.parcel.eudr.status !== 'conforme';
+      const poly = L.polygon(p.parcel.coords, { color: bad ? '#D62828' : col, weight:2, fillColor:col, fillOpacity:.45 });
+      const hs = Store.harvestsOf(p.id);
+      poly.bindPopup('<b>' + Util.esc(p.name) + '</b><br><span class="mono">' + p.id + '</span> · ' + (p.sex==='F'?'Femme':'Homme') + '<br>' + Util.esc(p.village) + ' (' + Util.village(p.village).territoire + ') · ' + Util.esc(p.filiere) +
+        '<br>Superficie : <b>' + Util.num(p.parcel.areaHa,2) + ' ha</b><br>' + UI.eudrBadge(p) + '<br>Livraisons : ' + hs.length + ' · ' + Util.kg(hs.reduce((s,h)=>s+h.weightKg,0)) +
+        '<br><button class="btn btn-primary btn-sm" style="margin-top:8px" data-sheet="' + p.id + '">Fiche de traçabilité complète</button>');
+      poly.on('popupopen', e => { const b = e.popup.getElement().querySelector('[data-sheet]'); if(b) b.onclick = () => { this.map.closePopup(); UI.producerSheet(b.dataset.sheet); }; });
+      poly.addTo(this.parcelsLayer);
+      // Marqueur visible à petite échelle (les parcelles font 1 à 4 ha)
+      L.circleMarker(Geo.centroid(p.parcel.coords), { radius:6, color:'#fff', weight:2, fillColor: bad ? '#D62828' : col, fillOpacity:1 }).bindTooltip(p.name + ' · ' + Util.num(p.parcel.areaHa,2) + ' ha')
+        .on('click', () => { this.map.fitBounds(poly.getBounds(), { maxZoom:16 }); poly.openPopup(); }).addTo(this.parcelsLayer);
+    });
+    setTimeout(() => { this.map.invalidateSize(); if(this.parcelsLayer.getLayers().length && !this._fitted){ this.map.fitBounds(this.parcelsLayer.getBounds().pad(0.15)); this._fitted = true; } }, 60);
+  },
+  renderCharts(s){
+    if(typeof Chart === 'undefined'){
+      ['chartVolumes','chartGender','chartRevenue'].forEach(id => { const c = document.getElementById(id); if(c) c.parentElement.innerHTML = '<div class="map-fallback">Graphiques indisponibles : Chart.js non chargé (hors ligne au premier lancement).</div>'; });
+      return;
+    }
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = '#3A5166';
+    Object.values(this.charts).forEach(c => c.destroy());
+    // 1. Volumes par village et filière (barres empilées, tonnes)
+    const villages = [...new Set(Store.data.harvests.map(h => (Store.producer(h.producerId)||{}).village).filter(Boolean))]
+      .sort((a,b) => Util.village(a).territoire.localeCompare(Util.village(b).territoire) || a.localeCompare(b));
+    const fils = Object.keys(CONFIG.filieres).filter(f => Store.data.harvests.some(h => h.filiere === f));
+    this.charts.vol = new Chart($('#chartVolumes'), {
+      type:'bar',
+      data:{ labels: villages.map(v => [v, Util.village(v).territoire]), datasets: fils.map(f => ({
+        label:f, backgroundColor:CONFIG.filieres[f].color, borderRadius:4, maxBarThickness:46,
+        data: villages.map(v => Util.round2(Store.data.harvests.filter(h => h.filiere === f && (Store.producer(h.producerId)||{}).village === v).reduce((s,h)=>s+h.weightKg,0)/1000))
+      })) },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label:c => c.dataset.label + ' : ' + Util.num(c.raw,2) + ' t' } } },
+        scales:{ x:{ stacked:true, grid:{ display:false } }, y:{ stacked:true, title:{ display:true, text:'tonnes' }, grid:{ color:'#E6EEF4' } } } }
+    });
+    // 2. Parité (doughnut)
+    this.charts.gender = new Chart($('#chartGender'), {
+      type:'doughnut',
+      data:{ labels:['Femmes','Hommes'], datasets:[{ data:[s.women, s.n - s.women], backgroundColor:['#2D6A4F','#0077B6'], borderColor:'#fff', borderWidth:3 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label:c => c.label + ' : ' + c.raw + ' producteur(s)' } } } }
+    });
+    const pctPaidW = s.paidUsd ? s.paidWomen/s.paidUsd*100 : 0;
+    $('#genderNote').innerHTML = '<b>' + Util.usd0(s.paidWomen) + '</b> versés directement à des femmes, soit <b>' + Util.num(pctPaidW,0) + ' %</b> des paiements Mobile Money (' + Util.usd0(s.paidUsd - s.paidWomen) + ' aux hommes).';
+    // 3. Revenus versés par mois et par sexe
+    const months = [];
+    const now = new Date(); const last = Store.data.harvests.reduce((m,h) => h.paidAt && h.paidAt > m ? h.paidAt : m, now.toISOString());
+    const end = new Date(last);
+    for(let i=5;i>=0;i--){ const d = new Date(end.getFullYear(), end.getMonth()-i, 1); months.push(d.getFullYear() + '-' + Util.pad(d.getMonth()+1,2)); }
+    const sumBy = (sex) => months.map(m => Util.round2(Store.data.harvests.filter(h => h.paidAt && h.paidAt.slice(0,7) === m && (Store.producer(h.producerId)||{}).sex === sex).reduce((s,h)=>s+h.totalUsd,0)));
+    this.charts.rev = new Chart($('#chartRevenue'), {
+      type:'bar',
+      data:{ labels: months.map(m => new Date(m + '-01T00:00:00').toLocaleDateString('fr-FR',{ month:'short', year:'2-digit' })), datasets:[
+        { label:'Femmes', data:sumBy('F'), backgroundColor:'#2D6A4F', borderRadius:4, maxBarThickness:56 },
+        { label:'Hommes', data:sumBy('M'), backgroundColor:'#0077B6', borderRadius:4, maxBarThickness:56 }
+      ] },
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false }, plugins:{ legend:{ position:'bottom' },
+        tooltip:{ callbacks:{ label:c => c.dataset.label + ' : ' + Util.usd(c.raw), footer:items => 'Total : ' + Util.usd(items.reduce((s,i)=>s+i.raw,0)) } } },
+        scales:{ y:{ stacked:true, beginAtZero:true, ticks:{ callback:v => '$' + v.toLocaleString('en-US') }, grid:{ color:'#E6EEF4' } }, x:{ stacked:true, grid:{ display:false } } } }
+    });
+  },
+
+  /* ---- Exports ---- */
+  exportGeoJSON(){
+    const mapped = Store.data.producers.filter(p => p.parcel);
+    if(!mapped.length){ UI.toast('Aucune parcelle cartographiée à exporter.', 'warn'); return; }
+    const fc = {
+      type:'FeatureCollection',
+      name:'KivuTrace_EUDR_parcelles',
+      crs:{ type:'name', properties:{ name:'urn:ogc:def:crs:OGC:1.3:CRS84' } },
+      metadata:{ generator:'KivuTrace & Market MVP', cooperative:Store.s.coop, exportedAt:new Date().toISOString(), regulation:'Règlement (UE) 2023/1115 (EUDR)', deforestationCutoff:'2020-12-31',
+        note:'Pré-contrôle aires protégées sur contours simplifiés. Vérification déforestation à compléter avec JRC GFC2020 / Global Forest Watch.' },
+      features: mapped.map(p => {
+        const v = Util.village(p.village);
+        const hs = Store.harvestsOf(p.id);
+        const ring = p.parcel.coords.map(c => [+c[1].toFixed(6), +c[0].toFixed(6)]);
+        ring.push(ring[0].slice()); // anneau fermé (RFC 7946)
+        return { type:'Feature', geometry:{ type:'Polygon', coordinates:[ring] }, properties:{
+          ProducerName:p.name, ProducerCountry:'CD', ProductionPlace:p.village + ', ' + v.territoire + ', ' + v.province, Area:p.parcel.areaHa,
+          producer_id:p.id, sex:p.sex, village:p.village, territoire:v.territoire, province:v.province,
+          commodity:p.filiere, hs_code:CONFIG.filieres[p.filiere].hs, eudr_in_scope:EUDR_SCOPE.includes(p.filiere),
+          area_ha:p.parcel.areaHa, perimeter_m:p.parcel.perimeterM, vertices:p.parcel.coords.length, capture_method:p.parcel.method, captured_at:p.parcel.capturedAt,
+          eudr_status:p.parcel.eudr.status, protected_area_overlap:p.parcel.eudr.area, checked_at:p.parcel.eudr.checkedAt,
+          deliveries:hs.length, volume_kg:Util.round2(hs.reduce((s,h)=>s+h.weightKg,0)), lots:[...new Set(hs.map(h=>h.lotId).filter(Boolean))].join(' ')
+        } };
+      })
+    };
+    Util.download('kivutrace_eudr_parcelles_' + Util.stamp() + '.geojson', JSON.stringify(fc, null, 2), 'application/geo+json');
+    UI.toast('GeoJSON exporté : ' + mapped.length + ' parcelle(s).', 'success');
+  },
+  // CSV séparateur ";" et décimale "," (Excel français) avec BOM UTF-8
+  csv(headers, rows){
+    const cell = v => { if(typeof v === 'number') v = String(v).replace('.', ','); v = String(v ?? ''); return /[;"\n\r]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+    return '﻿' + [headers, ...rows].map(r => r.map(cell).join(';')).join('\r\n');
+  },
+  exportCSV(){
+    const H = Store.data.harvests.slice().sort((a,b) => a.date.localeCompare(b.date));
+    const rows = H.map(h => { const p = Store.producer(h.producerId) || {}; const v = Util.village(p.village);
+      return [h.id, h.date.slice(0,10), p.id, p.name, p.sex, p.phone, p.village, v.territoire, v.province, h.filiere, h.grade, h.weightKg, h.priceUsd, h.totalUsd, h.rate, h.totalCdf,
+        h.status === 'paid' ? 'Payé' : 'En attente', CONFIG.operators[h.operator].short, h.txRef || '', h.paidAt ? h.paidAt.slice(0,10) : '', h.paidCurrency || '', h.lotId || '',
+        p.parcel ? p.parcel.areaHa : '', p.parcel ? p.parcel.eudr.status : 'non_cartographié', h.synced ? 'oui' : 'non']; });
+    const csv = this.csv(['collecte_id','date','producteur_id','producteur_nom','sexe','telephone','village','territoire','province','filiere','grade','poids_kg','prix_usd_kg','montant_usd','taux_cdf','montant_cdf','statut_paiement','operateur','ref_transaction','date_paiement','devise','lot','parcelle_ha','statut_eudr','synchronise'], rows);
+    Util.download('kivutrace_rapport_collectes_' + Util.stamp() + '.csv', csv, 'text/csv;charset=utf-8');
+    UI.toast('Rapport CSV exporté : ' + rows.length + ' collecte(s).', 'success');
+  },
+  exportProducersCSV(){
+    const rows = Store.data.producers.map(p => { const v = Util.village(p.village); const hs = Store.harvestsOf(p.id); const c = p.parcel ? Geo.centroid(p.parcel.coords) : null;
+      return [p.id, p.name, p.sex, p.phone, p.voterId, p.village, v.territoire, v.province, p.filiere, p.createdAt.slice(0,10), p.parcel ? p.parcel.areaHa : '', c ? +c[0].toFixed(6) : '', c ? +c[1].toFixed(6) : '',
+        p.parcel ? p.parcel.eudr.status : 'non_cartographié', hs.length, Util.round2(hs.reduce((s,h)=>s+h.weightKg,0)), Util.round2(hs.filter(h=>h.status==='paid').reduce((s,h)=>s+h.totalUsd,0))]; });
+    const csv = this.csv(['producteur_id','nom','sexe','telephone','id_electeur','village','territoire','province','filiere','date_inscription','parcelle_ha','centroide_lat','centroide_lng','statut_eudr','nb_livraisons','volume_kg','total_paye_usd'], rows);
+    Util.download('kivutrace_producteurs_' + Util.stamp() + '.csv', csv, 'text/csv;charset=utf-8');
+    UI.toast('CSV producteurs exporté.', 'success');
+  }
+};
+
+/* ------------------------------------------------------------------------
+   Settings : paramètres + réinitialisation démo
+   ------------------------------------------------------------------------ */
+const Settings = {
+  open(){
+    const s = Store.s;
+    UI.modal({
+      title:'Paramètres',
+      body:'<div class="form-grid cols-2"><div class="full"><label class="lbl" for="setCoop">Nom de la coopérative</label><input class="input" id="setCoop" value="' + Util.esc(s.coop) + '"></div>' +
+        '<div><label class="lbl" for="setAgent">Agent connecté</label><input class="input" id="setAgent" value="' + Util.esc(s.agent) + '"></div>' +
+        '<div><label class="lbl" for="setRate">Taux de change (CDF pour 1 USD)</label><input class="input" id="setRate" type="number" min="1" step="1" value="' + s.rate + '"></div>' +
+        '<div class="full"><span class="lbl">Prix du jour Grade A ($/kg). Grade B = 90 %, Grade C = 75 %</span><div class="form-grid cols-2">' +
+        Object.keys(CONFIG.filieres).map((f,i) => '<div><label class="lbl small" for="setP' + i + '">' + f + '</label><input class="input" id="setP' + i + '" data-f="' + f + '" type="number" min="0.01" step="0.01" value="' + (s.prices[f] ?? CONFIG.filieres[f].price).toFixed(2) + '"></div>').join('') + '</div></div>' +
+        '<div class="full"><label class="check"><input type="checkbox" id="setAuto"' + (s.autoSync ? ' checked' : '') + '> Synchronisation automatique dès que le réseau est disponible</label></div></div>' +
+        '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0"><p class="small muted" style="margin:0 0 8px">Stockage : ' + (Store.memoryOnly ? 'mémoire uniquement (localStorage bloqué)' : 'localStorage de ce navigateur') + ' · ' +
+        Math.round(JSON.stringify(Store.data).length/1024) + ' Ko · ' + Store.data.producers.length + ' producteurs, ' + Store.data.harvests.length + ' collectes</p>' +
+        '<div class="btn-row"><button class="btn btn-ghost btn-sm" id="resetDemo" type="button"><i class="fa-solid fa-rotate"></i> Réinitialiser les données démo</button><button class="btn btn-ghost btn-sm" id="wipeAll" type="button" style="color:var(--red)"><i class="fa-solid fa-trash"></i> Vider toutes les données</button></div>',
+      actions:[{ label:'Annuler', cls:'btn-ghost', onClick:UI.closeModal }, { label:'Enregistrer', cls:'btn-primary', onClick:()=>this.save() }]
+    });
+    $('#resetDemo').addEventListener('click', () => UI.confirm('Réinitialiser les données démo ?', '<p>Toutes les saisies locales seront remplacées par le jeu de démonstration (8 producteurs, 18 collectes).</p>', 'Réinitialiser', () => {
+      Store.data = Seed.build(); Store.save(); UI.closeModal(); Donor._fitted = false; App.refreshAll(); UI.toast('Données de démonstration rechargées.', 'success');
+    }, 'btn-amber'));
+    $('#wipeAll').addEventListener('click', () => UI.confirm('Vider toutes les données ?', '<p>Producteurs, parcelles, collectes et SMS seront supprimés de cet appareil. Action irréversible.</p>', 'Tout supprimer', () => {
+      const s = Store.s; Store.data = Seed.build();
+      Object.assign(Store.data, { producers:[], harvests:[], lots:[], queue:[], sms:[], syncLog:[], lastSync:null, seq:{ producer:0, harvest:0, lot:0 }, settings:s });
+      Store.save(); UI.closeModal(); App.refreshAll(); UI.toast('Toutes les données ont été supprimées.', 'warn');
+    }, 'btn-red'));
+  },
+  save(){
+    const s = Store.s;
+    const rate = parseFloat($('#setRate').value);
+    if(!(rate > 0)){ UI.toast('Taux de change invalide.', 'error'); return; }
+    s.coop = $('#setCoop').value.trim() || 'Coopérative KivuTrace';
+    s.agent = $('#setAgent').value.trim() || 'Agent terrain';
+    s.rate = rate;
+    $$('[data-f]').forEach(i => { const v = parseFloat(i.value); if(v > 0) s.prices[i.dataset.f] = Util.round2(v); });
+    s.autoSync = $('#setAuto').checked;
+    Store.save(); UI.closeModal(); App.refreshAll(); Agent.updatePrice();
+    UI.toast('Paramètres enregistrés.', 'success');
+  }
+};
+
+/* ------------------------------------------------------------------------
+   App : démarrage, navigation, rafraîchissements
+   ------------------------------------------------------------------------ */
+const App = {
+  view:'agent',
+  start(){
+    Store.load();
+    Agent.init(); Coop.init(); Donor.init(); Net.init();
+    $$('.tab').forEach(t => t.addEventListener('click', () => this.go(t.dataset.view)));
+    $('#smsBtn').addEventListener('click', () => SMS.inbox());
+    $('#settingsBtn').addEventListener('click', () => Settings.open());
+    document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#modalRoot').innerHTML) UI.closeModal(); });
+    const h = location.hash.replace('#','');
+    this.refreshAll();
+    if(['agent','coop','donor'].includes(h)) this.go(h);
+    Agent.updatePrice();
+    if(Store.memoryOnly) UI.toast('Stockage local bloqué par le navigateur : les données ne survivront pas au rechargement.', 'warn');
+    // Service worker : mise en cache de l'app et des librairies pour un usage hors ligne réel
+    if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  },
+  go(view){
+    this.view = view;
+    $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+    $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+    history.replaceState(null, '', '#' + view);
+    if(view === 'donor') Donor.render();
+    if(view === 'coop') Coop.render();
+    if(view === 'agent' && $('#pane-parcel').classList.contains('active')) Agent.ensureMap();
+  },
+  refreshBadges(){
+    const q = Store.data.queue.length;
+    $('#queueTabBadge').textContent = q; $('#queueTabBadge').classList.toggle('hidden', !q);
+    const unread = Store.data.sms.filter(m => !m.read).length;
+    $('#smsCount').textContent = unread; $('#smsCount').classList.toggle('hidden', !unread);
+    $('#coopName').textContent = Store.s.coop;
+  },
+  refreshAll(){
+    this.refreshBadges();
+    Agent.refresh();
+    Coop.render();
+    if(this.view === 'donor') Donor.render();
+    Net.render();
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.start());
+</script>
+</body>
+</html>
