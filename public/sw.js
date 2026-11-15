@@ -1,6 +1,6 @@
 // Service worker : met en cache l'application agent pour qu'elle s'ouvre sans réseau.
 // L'API (/api/*) n'est jamais mise en cache ici : la synchronisation hors ligne est gérée par l'application (étape b).
-const VERSION = 'kt-agent-v2-a1';
+const VERSION = 'kt-agent-v2-a2';
 const SHELL = ['/agent', '/assets/app.css', '/assets/icons.svg', '/assets/logo-mark.png', '/assets/icon-192.png', '/manifest.webmanifest',
   '/js/pages/agent.js', '/js/socle/api.js', '/js/socle/auth.js', '/js/socle/util.js', '/js/socle/i18n.js', '/js/socle/geo.js', '/js/ui/ui.js'];
 

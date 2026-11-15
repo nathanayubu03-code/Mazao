@@ -68,6 +68,6 @@ export const HOME = { agent: '/agent', buyer: '/app', coordination: '/app', admi
 export async function guard(roles) {
   const s = session.get();
   if (!s?.token) { location.replace('/?next=' + encodeURIComponent(location.pathname)); return null; }
-  if (!roles.includes(s.user.role)) { location.replace(HOME[s.user.role] || '/'); return null; }
+  if (!roles.includes(s.user.role)) { session.clear(); location.replace('/'); return null; }
   return s.user;
 }
